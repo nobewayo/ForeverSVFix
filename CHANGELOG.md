@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 RC10
+
+- Add automatic update notifications using the public GitHub Releases API.
+- Cache automatic checks for 24 hours and fail quietly when GitHub is unavailable.
+- Add a manual `Check for ForeverSVFix updates` menu option and `check-update` CLI command.
+- Include prereleases when checking for updates, so RC users are warned about newer RC builds.
+- Document that no WoW data, addon data, or telemetry is sent during update checks.
+- Document and mark the EllesmereUI v9.2.1 profile compatibility path as validated in-game.
+- Keep the SavedVariables restoration mechanism unchanged from RC9.
+
+
 ## 0.4.0 RC9
 
 - Add targeted EllesmereUI v9.2.1 profile compatibility.

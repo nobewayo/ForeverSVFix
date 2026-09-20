@@ -62,7 +62,6 @@ No repair needed.
 
 You can now close ForeverSVFix and start World of Warcraft normally.
 
-
 ### EllesmereUI support
 
 If **EllesmereUI** is installed, ForeverSVFix also patches the local EllesmereUI
@@ -78,14 +77,10 @@ ForeverSVFix does **not** redistribute or replace EllesmereUI itself, and it
 does not disable other Forever-specific compatibility restrictions that are
 unrelated to SavedVariables.
 
-This has been validated in-game with **EllesmereUI v9.2.1**, including:
+This has been validated in-game with **EllesmereUI v9.2.1**, including profile
+creation and switching, `/reload`, relogging, and full client restarts.
 
-- profile creation and switching;
-- settings persistence across `/reload`;
-- relogging;
-- full client restarts.
-
-After updating EllesmereUI, close WoW and run:
+After updating EllesmereUI, close WoW and choose:
 
 ```text
 2. Repair after addon updates
@@ -202,7 +197,7 @@ Close WoW -> start ForeverSVFix -> press 8
 
 ## Status
 
-**Release candidate: v0.4.0 RC9**
+**Release candidate: v0.4.0 RC10**
 
 Verified in-game on Forever for account-wide SavedVariables:
 
@@ -228,7 +223,7 @@ The following behavior has been verified on WoW Forever 1.60.1 under Linux/Wine:
 The underlying bug/workaround model is therefore validated for all three cases:
 account-wide, per-character, and mixed SavedVariables.
 
-### EllesmereUI profile compatibility (RC9)
+### EllesmereUI profile compatibility (RC9+)
 
 EllesmereUI v9.2.1 ships its normal profile implementation on WoW Forever, but
 sets a temporary `FOREVER_SV_BUG` safety flag because the beta client does not
@@ -236,7 +231,7 @@ reliably restore SavedVariables. That flag intentionally disables Profiles &
 Presets, reload-dependent profile flows, first-install/style flows, and the
 normal SavedVariables write path.
 
-When RC9 detects the known EllesmereUI layout, it generates a tiny local
+When ForeverSVFix detects the known EllesmereUI layout, it generates a tiny local
 compatibility shim and loads it immediately after `EllesmereUI_Lite.lua`. The
 shim turns off only that SavedVariables safety flag while leaving
 `EllesmereUI.IS_FOREVER` untouched. Forever-specific restrictions unrelated to
@@ -246,9 +241,9 @@ ForeverSVFix does **not** redistribute or replace EllesmereUI code. It patches
 the user's installed TOC and removes its generated compatibility file again on
 uninstall. Doctor verifies the expected load order.
 
-This integration has been validated in-game with EllesmereUI v9.2.1, including
-profile creation and switching, settings persistence across `/reload`, relogging,
-and full client restarts.
+This integration has been validated in-game with EllesmereUI v9.2.1,
+including profile creation and switching, settings persistence across `/reload`,
+relogging, and full client restarts.
 
 ## How it works
 
@@ -285,6 +280,32 @@ Per-character paths differ by character, so loading them all would be unsafe.
 v0.3 generates a tiny load-on-demand helper for each `(addon, character)` pair and injects `ForeverSVFixCharacter.lua` into the affected addon. At load time it matches the current player/realm against discovered character folders and loads only one matching helper.
 
 If matching is ambiguous, it **refuses to restore per-character data** and prints a warning instead of risking another character's settings.
+
+## Update checks
+
+ForeverSVFix checks the public GitHub Releases API for newer releases when the
+interactive app starts. Automatic checks are cached for 24 hours, include both
+release candidates and stable releases, and use a short timeout so an unavailable
+network does not prevent ForeverSVFix from starting.
+
+If a newer version is available, ForeverSVFix shows a warning with the installed
+and latest versions plus the official Releases page. It does **not** download or
+install updates automatically.
+
+You can also choose:
+
+```text
+9. Check for ForeverSVFix updates
+```
+
+or run:
+
+```bash
+python3 forever_sv_fix.py check-update
+```
+
+The update check sends only a normal HTTPS request to GitHub. ForeverSVFix does
+not send WoW paths, account names, SavedVariables, addon lists, or telemetry.
 
 ## Standalone downloads
 
@@ -329,8 +350,10 @@ Download the build for your operating system from GitHub Releases and run it.
 
 Running `forever_sv_fix.py` directly requires Python 3.10+.
 
-No network access, service, daemon, or telemetry is required by ForeverSVFix
-itself. Windows may use a normal NTFS junction if a symbolic link cannot be
+No service, daemon, account, or telemetry is required by ForeverSVFix. The
+optional update notification uses the public GitHub Releases API and is cached
+for 24 hours. All SavedVariables repair functionality works without network
+access. Windows may use a normal NTFS junction if a symbolic link cannot be
 created.
 
 ## Advanced / command-line usage
@@ -423,6 +446,31 @@ If a per-character restore cannot be matched safely, ForeverSVFix prints a yello
 
 ForeverSVFix is a temporary compatibility workaround for a beta client. It is not affiliated with Blizzard Entertainment or individual addon authors.
 
+## Development disclosure
+
+AI tools were used during development to assist with coding, review, testing
+support, and documentation. Development decisions, iteration, and in-game
+validation were performed manually by the project author.
+
+## License
+
+Copyright (c) 2026 Simon Ahnfeldt Nielsen.
+
+You may use, modify, fork, and publish modified versions of ForeverSVFix.
+
+If you publish a modified version, you must:
+
+- clearly state that it is a modified version of ForeverSVFix;
+- retain credit to **Simon Ahnfeldt Nielsen** as the original author; and
+- not claim or imply that your modified version is an official release.
+
+You may not simply mirror or re-upload an **unchanged official copy** of
+ForeverSVFix or its official release files elsewhere without permission.
+
+Linking to the official repository and official releases is allowed.
+
+See [`LICENSE`](LICENSE) for the full terms.
+
 ## Forever TOC selection
 
 v0.3.1 no longer patches every flavor-specific TOC shipped in an addon folder.
@@ -488,30 +536,4 @@ The SavedVariables workaround itself has been validated on Linux/Wine.
 **Windows and macOS have not yet been tested in-game.** Their implementations
 exist and are covered by automated tests/builds, but should remain marked as
 experimental until native WoW users confirm the behavior.
-
-
-## Development disclosure
-
-AI tools were used during development to assist with coding, review, testing
-support, and documentation. Development decisions, iteration, and in-game
-validation were performed manually by the project author.
-
-## License
-
-Copyright (c) 2026 Simon Ahnfeldt Nielsen.
-
-You may use, modify, fork, and publish modified versions of ForeverSVFix.
-
-If you publish a modified version, you must:
-
-- clearly state that it is a modified version of ForeverSVFix;
-- retain credit to **Simon Ahnfeldt Nielsen** as the original author; and
-- not claim or imply that your modified version is an official release.
-
-You may not simply mirror or re-upload an **unchanged official copy** of
-ForeverSVFix or its official release files elsewhere without permission.
-
-Linking to the official repository and official releases is allowed.
-
-See [`LICENSE`](LICENSE) for the full terms.
 

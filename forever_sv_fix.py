@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ForeverSVFix 0.4.0 RC9
+ForeverSVFix 0.4.0 RC10
 
 Temporary workaround for the World of Warcraft: Forever beta SavedVariables
 loading bug.
@@ -28,11 +28,14 @@ import re
 import shutil
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-VERSION = "0.4.0-rc9"
+VERSION = "0.4.0-rc10"
 DATA_DIR = "ForeverSVFixData"
 CHAR_BOOTSTRAP = "ForeverSVFixCharacter.lua"
 ELLESMERE_COMPAT = "ForeverSVFixEllesmereUI.lua"
@@ -41,6 +44,13 @@ STATE_FILE_NAME = "state-v3.json"
 MARKER = "X-ForeverSVFix"
 MARKER_VERSION = "4"
 INTERFACE = "16001"
+
+GITHUB_REPO = "nobewayo/ForeverSVFix"
+GITHUB_RELEASES_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=20"
+GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
+UPDATE_CHECK_INTERVAL = 24 * 60 * 60
+UPDATE_CHECK_TIMEOUT = 2.5
+VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-rc(\d+))?$")
 
 SV_RE = re.compile(r"^\s*##\s*SavedVariables\s*:\s*(.*?)\s*$", re.IGNORECASE)
 SVPC_RE = re.compile(r"^\s*##\s*SavedVariablesPerCharacter\s*:\s*(.*?)\s*$", re.IGNORECASE)
@@ -1048,6 +1058,176 @@ def status(wow: Path) -> int:
 
 
 
+
+def version_key(value: str) -> tuple[int, int, int, int, int] | None:
+    """Return a sortable key for ForeverSVFix release versions.
+
+    Stable releases sort after release candidates of the same base version.
+    Unknown tag formats are ignored rather than guessed.
+    """
+    m = VERSION_RE.match(value.strip())
+    if not m:
+        return None
+    major, minor, patch = (int(m.group(i)) for i in (1, 2, 3))
+    rc = m.group(4)
+    if rc is None:
+        return (major, minor, patch, 1, 0)
+    return (major, minor, patch, 0, int(rc))
+
+
+def select_latest_release(releases: object) -> dict | None:
+    """Pick the newest non-draft ForeverSVFix release, including prereleases."""
+    if not isinstance(releases, list):
+        return None
+
+    best = None
+    best_key = None
+    for item in releases:
+        if not isinstance(item, dict) or item.get("draft"):
+            continue
+        tag = item.get("tag_name")
+        if not isinstance(tag, str):
+            continue
+        key = version_key(tag)
+        if key is None:
+            continue
+        if best_key is None or key > best_key:
+            best = item
+            best_key = key
+    return best
+
+
+def fetch_latest_release() -> dict | None:
+    req = urllib.request.Request(
+        GITHUB_RELEASES_API,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "User-Agent": f"ForeverSVFix/{VERSION}",
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=UPDATE_CHECK_TIMEOUT) as response:
+            payload = response.read()
+        releases = json.loads(payload.decode("utf-8"))
+        return select_latest_release(releases)
+    except (OSError, ValueError, urllib.error.URLError, urllib.error.HTTPError):
+        return None
+
+
+def update_available(latest_tag: str | None) -> bool:
+    if not latest_tag:
+        return False
+    current = version_key(VERSION)
+    latest = version_key(latest_tag)
+    return current is not None and latest is not None and latest > current
+
+
+def check_for_update(config: dict, force: bool = False) -> dict:
+    """Check GitHub Releases, with a 24-hour cache for automatic checks.
+
+    Returns a small result dict. Network failures are intentionally non-fatal.
+    """
+    now = int(time.time())
+    cache = config.get("update_check")
+    if not isinstance(cache, dict):
+        cache = {}
+
+    last_checked = cache.get("last_checked")
+    if (
+        not force
+        and isinstance(last_checked, (int, float))
+        and now - int(last_checked) < UPDATE_CHECK_INTERVAL
+    ):
+        tag = cache.get("latest_tag")
+        url = cache.get("latest_url") or GITHUB_RELEASES_URL
+        return {
+            "checked": False,
+            "from_cache": True,
+            "available": update_available(tag if isinstance(tag, str) else None),
+            "latest_tag": tag if isinstance(tag, str) else None,
+            "url": url if isinstance(url, str) else GITHUB_RELEASES_URL,
+            "error": None,
+        }
+
+    release = fetch_latest_release()
+    if release is None:
+        # Cache the failed attempt too, so offline users are not delayed by a
+        # network timeout on every launch. Keep any previously known release.
+        old_tag = cache.get("latest_tag")
+        old_url = cache.get("latest_url") or GITHUB_RELEASES_URL
+        cache["last_checked"] = now
+        config["update_check"] = cache
+        try:
+            save_config(config)
+        except OSError:
+            pass
+        return {
+            "checked": True,
+            "from_cache": False,
+            "available": update_available(old_tag if isinstance(old_tag, str) else None),
+            "latest_tag": old_tag if isinstance(old_tag, str) else None,
+            "url": old_url if isinstance(old_url, str) else GITHUB_RELEASES_URL,
+            "error": "Could not reach GitHub Releases.",
+        }
+
+    tag = release.get("tag_name")
+    url = release.get("html_url")
+    if not isinstance(tag, str):
+        tag = None
+    if not isinstance(url, str) or not url.startswith("https://github.com/"):
+        url = GITHUB_RELEASES_URL
+
+    cache = {
+        "last_checked": now,
+        "latest_tag": tag,
+        "latest_url": url,
+    }
+    config["update_check"] = cache
+    try:
+        save_config(config)
+    except OSError:
+        pass
+
+    return {
+        "checked": True,
+        "from_cache": False,
+        "available": update_available(tag),
+        "latest_tag": tag,
+        "url": url,
+        "error": None,
+    }
+
+
+def print_update_warning(result: dict) -> None:
+    if not result.get("available"):
+        return
+    latest = result.get("latest_tag") or "newer release"
+    url = result.get("url") or GITHUB_RELEASES_URL
+    print("=" * 54)
+    print("UPDATE AVAILABLE")
+    print()
+    print(f"You are running: {VERSION}")
+    print(f"Latest release:  {latest}")
+    print()
+    print(url)
+    print("=" * 54)
+    print()
+
+
+def manual_update_check(config: dict) -> None:
+    result = check_for_update(config, force=True)
+    print()
+    if result.get("error"):
+        print("Could not check for updates right now.")
+        print("ForeverSVFix will continue to work normally.")
+    elif result.get("available"):
+        print_update_warning(result)
+    else:
+        latest = result.get("latest_tag") or VERSION
+        print(f"You are up to date. Latest release: {latest}")
+        print(GITHUB_RELEASES_URL)
+    pause_menu()
+
 def config_dir() -> Path:
     system = platform.system()
     if system == "Windows":
@@ -1306,6 +1486,8 @@ def run_menu_action(fn, *args) -> None:
 
 def interactive_menu() -> int:
     config = load_config()
+    update_result = check_for_update(config, force=False)
+    update_warning_shown = False
 
     try:
         wow = select_wow_interactive(config)
@@ -1319,6 +1501,9 @@ def interactive_menu() -> int:
         clear_screen()
         installed = load_state(wow) is not None
 
+        if update_result.get("available") and not update_warning_shown:
+            print_update_warning(update_result)
+            update_warning_shown = True
         print(f"ForeverSVFix {VERSION}")
         print("=" * 54)
         print(f"WoW:     {wow}")
@@ -1333,6 +1518,7 @@ def interactive_menu() -> int:
         print("  6. Change WoW installation")
         print("  7. Change WoW account")
         print("  8. Uninstall ForeverSVFix")
+        print("  9. Check for ForeverSVFix updates")
         print("  0. Exit")
         print()
 
@@ -1371,6 +1557,10 @@ def interactive_menu() -> int:
                 run_menu_action(uninstall, wow)
             else:
                 pause_menu()
+        elif choice == "9":
+            manual_update_check(config)
+            update_result = check_for_update(config, force=False)
+            update_warning_shown = True
         else:
             print("\nInvalid selection.")
             pause_menu()
@@ -1390,7 +1580,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="WTF/Account folder if multiple accounts exist.",
     )
     sub = p.add_subparsers(dest="command")
-    for name in ("scan", "install", "repair", "doctor", "status", "uninstall"):
+    for name in ("scan", "install", "repair", "doctor", "status", "uninstall", "check-update"):
         sub.add_parser(name)
     return p
 
@@ -1401,6 +1591,18 @@ def main(argv=None) -> int:
     # No command means normal-user interactive mode.
     if args.command is None:
         return interactive_menu()
+
+    if args.command == "check-update":
+        config = load_config()
+        result = check_for_update(config, force=True)
+        if result.get("error"):
+            print("Could not check for updates right now.", file=sys.stderr)
+            return 2
+        if result.get("available"):
+            print_update_warning(result)
+            return 0
+        print(f"ForeverSVFix {VERSION} is up to date.")
+        return 0
 
     try:
         wow = resolve_wow_noninteractive(args.wow)

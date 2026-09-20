@@ -384,5 +384,49 @@ class Tests(unittest.TestCase):
             self.assertIn("EllesmereUI fix:    1", text)
 
 
+    def test_version_key_orders_release_candidates_and_stable(self):
+        self.assertLess(m.version_key("0.4.0-rc9"), m.version_key("0.4.0-rc10"))
+        self.assertLess(m.version_key("v0.4.0-rc10"), m.version_key("0.4.0"))
+        self.assertLess(m.version_key("0.4.0"), m.version_key("0.4.1-rc1"))
+        self.assertIsNone(m.version_key("nightly"))
+
+    def test_select_latest_release_includes_prereleases_and_skips_drafts(self):
+        releases = [
+            {"tag_name": "v0.4.0-rc9", "draft": False, "prerelease": True},
+            {"tag_name": "v0.4.0-rc10", "draft": False, "prerelease": True},
+            {"tag_name": "v9.9.9", "draft": True, "prerelease": False},
+            {"tag_name": "nightly", "draft": False, "prerelease": True},
+        ]
+        latest = m.select_latest_release(releases)
+        self.assertEqual(latest["tag_name"], "v0.4.0-rc10")
+
+    def test_update_available_uses_current_version(self):
+        self.assertFalse(m.update_available(m.VERSION))
+        self.assertFalse(m.update_available("v0.4.0-rc9"))
+        self.assertTrue(m.update_available("v0.4.0"))
+        self.assertTrue(m.update_available("v0.4.1-rc1"))
+
+    def test_cached_update_check_does_not_touch_network(self):
+        old_fetch = m.fetch_latest_release
+        old_config_dir = m.config_dir
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                m.config_dir = lambda: Path(td)
+                m.fetch_latest_release = lambda: self.fail("network should not be called")
+                cfg = {
+                    "update_check": {
+                        "last_checked": int(m.time.time()),
+                        "latest_tag": "v0.4.1-rc1",
+                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v0.4.1-rc1",
+                    }
+                }
+                result = m.check_for_update(cfg, force=False)
+                self.assertTrue(result["from_cache"])
+                self.assertTrue(result["available"])
+        finally:
+            m.fetch_latest_release = old_fetch
+            m.config_dir = old_config_dir
+
+
 if __name__ == "__main__":
     unittest.main()
