@@ -1,4 +1,6 @@
 # ForeverSVFix v0.4.0 RC10
+Standalone update checks now use a bundled CA certificate store so HTTPS works reliably in frozen builds.
+
 
 RC10 adds update notifications and carries forward the validated EllesmereUI
 profile compatibility introduced in RC9.

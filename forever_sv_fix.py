@@ -26,6 +26,7 @@ import os
 import platform
 import re
 import shutil
+import ssl
 import subprocess
 import sys
 import time
@@ -34,6 +35,11 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+
+try:
+    import certifi
+except ImportError:
+    certifi = None
 
 VERSION = "0.4.0-rc10"
 DATA_DIR = "ForeverSVFixData"
@@ -1097,6 +1103,21 @@ def select_latest_release(releases: object) -> dict | None:
     return best
 
 
+def https_context() -> ssl.SSLContext:
+    """Return a CA-backed HTTPS context that also works in frozen builds.
+
+    Source installs normally use the operating system trust store. Standalone
+    PyInstaller builds bundle certifi so HTTPS does not depend on an external
+    Python/OpenSSL certificate path being available at runtime.
+    """
+    if certifi is not None:
+        try:
+            return ssl.create_default_context(cafile=certifi.where())
+        except (OSError, AttributeError):
+            pass
+    return ssl.create_default_context()
+
+
 def fetch_latest_release() -> dict | None:
     req = urllib.request.Request(
         GITHUB_RELEASES_API,
@@ -1106,7 +1127,11 @@ def fetch_latest_release() -> dict | None:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=UPDATE_CHECK_TIMEOUT) as response:
+        with urllib.request.urlopen(
+            req,
+            timeout=UPDATE_CHECK_TIMEOUT,
+            context=https_context(),
+        ) as response:
             payload = response.read()
         releases = json.loads(payload.decode("utf-8"))
         return select_latest_release(releases)

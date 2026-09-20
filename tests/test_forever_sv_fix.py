@@ -406,6 +406,38 @@ class Tests(unittest.TestCase):
         self.assertTrue(m.update_available("v0.4.0"))
         self.assertTrue(m.update_available("v0.4.1-rc1"))
 
+    def test_https_context_prefers_certifi_bundle(self):
+        old_certifi = m.certifi
+        old_create = m.ssl.create_default_context
+        seen = []
+
+        class FakeCertifi:
+            @staticmethod
+            def where():
+                return "/tmp/fake-certifi.pem"
+
+        try:
+            m.certifi = FakeCertifi
+            m.ssl.create_default_context = lambda **kwargs: seen.append(kwargs) or object()
+            m.https_context()
+            self.assertEqual(seen, [{"cafile": "/tmp/fake-certifi.pem"}])
+        finally:
+            m.certifi = old_certifi
+            m.ssl.create_default_context = old_create
+
+    def test_https_context_falls_back_without_certifi(self):
+        old_certifi = m.certifi
+        old_create = m.ssl.create_default_context
+        seen = []
+        try:
+            m.certifi = None
+            m.ssl.create_default_context = lambda **kwargs: seen.append(kwargs) or object()
+            m.https_context()
+            self.assertEqual(seen, [{}])
+        finally:
+            m.certifi = old_certifi
+            m.ssl.create_default_context = old_create
+
     def test_cached_update_check_does_not_touch_network(self):
         old_fetch = m.fetch_latest_release
         old_config_dir = m.config_dir
