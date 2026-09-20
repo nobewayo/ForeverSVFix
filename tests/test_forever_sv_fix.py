@@ -460,5 +460,39 @@ class Tests(unittest.TestCase):
             m.config_dir = old_config_dir
 
 
+    def test_doctor_show_status_combines_health_and_status(self):
+        from contextlib import redirect_stdout
+        from io import StringIO
+
+        with tempfile.TemporaryDirectory() as td:
+            wow = Path(td) / "_classic_beta_"
+            (wow / "Interface" / "AddOns").mkdir(parents=True)
+            (wow / "WTF" / "Account" / "A#1" / "SavedVariables").mkdir(parents=True)
+
+            m.save_state(wow, {
+                "version": m.VERSION,
+                "account": "A#1",
+                "patched": [],
+                "linked_account_dirs": {},
+                "generated_pc_dirs": [],
+                "ellesmere_compat_files": [],
+            })
+
+            out = StringIO()
+            with redirect_stdout(out):
+                rc = m.doctor(wow, "A#1", show_status=True)
+
+            self.assertEqual(rc, 0)
+            text = out.getvalue()
+            self.assertIn("installation check", text)
+            self.assertIn("Installation:         OK", text)
+            self.assertIn("Installed version:    " + m.VERSION, text)
+            self.assertIn("Patched TOCs:         0", text)
+            self.assertIn("Account links:        0", text)
+            self.assertIn("Character helpers:    0", text)
+            self.assertIn("EllesmereUI fix:      0", text)
+            self.assertIn("No repair needed.", text)
+
+
 if __name__ == "__main__":
     unittest.main()

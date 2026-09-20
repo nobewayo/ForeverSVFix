@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ForeverSVFix 0.4.0 RC10
+ForeverSVFix 0.4.0 RC11
 
 Temporary workaround for the World of Warcraft: Forever beta SavedVariables
 loading bug.
@@ -41,7 +41,7 @@ try:
 except ImportError:
     certifi = None
 
-VERSION = "0.4.0-rc10"
+VERSION = "0.4.0-rc11"
 DATA_DIR = "ForeverSVFixData"
 CHAR_BOOTSTRAP = "ForeverSVFixCharacter.lua"
 ELLESMERE_COMPAT = "ForeverSVFixEllesmereUI.lua"
@@ -870,8 +870,8 @@ def install(wow: Path, account_name: str | None) -> int:
     print(f"Safety backup:        {backup}")
     print(f"Stale flavor TOCs cleaned: {stale_cleaned}")
     print()
-    print("Re-run 'repair' after addon updates or after a new character creates")
-    print("SavedVariables for the first time.")
+    print("Run Apply / Refresh after installing, updating, or removing addons,")
+    print("or after a new character creates SavedVariables for the first time.")
     return 0
 
 
@@ -934,7 +934,11 @@ def uninstall(wow: Path) -> int:
     return 0
 
 
-def doctor(wow: Path, account_name: str | None) -> int:
+def doctor(
+    wow: Path,
+    account_name: str | None,
+    show_status: bool = False,
+) -> int:
     account = choose_account(wow, account_name)
     account_sv = account / "SavedVariables"
     addons_dir = wow / "Interface" / "AddOns"
@@ -1015,15 +1019,35 @@ def doctor(wow: Path, account_name: str | None) -> int:
         if str(info.path) not in state_tocs:
             warnings.append(f"Compatible addon not yet patched: {info.path}")
 
-    print(f"ForeverSVFix doctor {VERSION}")
-    print(f"Account: {account.name}")
-    print()
+    if show_status:
+        print(f"ForeverSVFix {VERSION} installation check")
+        print()
+        if state:
+            healthy = not problems and not warnings
+            print(f"Installation:         {'OK' if healthy else 'NEEDS ATTENTION'}")
+            print(f"Installed version:    {state.get('version', 'unknown')}")
+            print(f"Account:              {state.get('account', account.name)}")
+            print(f"Patched TOCs:         {len(state.get('patched', []))}")
+            print(f"Account links:        {len(state.get('linked_account_dirs', {}))}")
+            print(f"Character helpers:    {len(state.get('generated_pc_dirs', []))}")
+            print(f"EllesmereUI fix:      {len(state.get('ellesmere_compat_files', []))}")
+            backup = state.get("backup")
+            if backup:
+                print(f"Last safety backup:   {backup}")
+        else:
+            print("Installation:         NOT INSTALLED")
+            print(f"Account:              {account.name}")
+        print()
+    else:
+        print(f"ForeverSVFix doctor {VERSION}")
+        print(f"Account: {account.name}")
+        print()
 
     if problems:
         print("PROBLEMS:")
         for p in problems:
             print(f"  - {p}")
-    else:
+    elif not warnings:
         print("Active installation checks: OK")
 
     if warnings:
@@ -1034,7 +1058,10 @@ def doctor(wow: Path, account_name: str | None) -> int:
 
     if problems or warnings:
         print()
-        print("Run: forever_sv_fix.py --wow <path> repair")
+        if show_status:
+            print("Run Apply / Refresh ForeverSVFix to repair the installation.")
+        else:
+            print("Run the 'repair' CLI command (or Apply / Refresh in the menu).")
         return 1
 
     print("No repair needed.")
@@ -1509,6 +1536,45 @@ def run_menu_action(fn, *args) -> None:
     pause_menu()
 
 
+def settings_menu(
+    wow: Path,
+    account: str | None,
+    config: dict,
+) -> tuple[Path, str | None]:
+    while True:
+        clear_screen()
+        print("ForeverSVFix Settings")
+        print("=" * 54)
+        print(f"WoW:     {wow}")
+        print(f"Account: {account or 'automatic'}")
+        print()
+        print("  1. Change WoW installation")
+        print("  2. Change WoW account")
+        print("  3. Back")
+        print()
+
+        try:
+            choice = input("Choose an option: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return wow, account
+
+        if choice == "1":
+            config.pop("wow_path", None)
+            config.pop("account", None)
+            save_config(config)
+            clear_screen()
+            wow = select_wow_interactive(config)
+            account = select_account_interactive(wow, config)
+        elif choice == "2":
+            account = select_account_interactive(wow, config, force=True)
+        elif choice == "3":
+            return wow, account
+        else:
+            print("\nInvalid selection.")
+            pause_menu()
+
+
 def interactive_menu() -> int:
     config = load_config()
     update_result = check_for_update(config, force=False)
@@ -1529,22 +1595,19 @@ def interactive_menu() -> int:
         if update_result.get("available") and not update_warning_shown:
             print_update_warning(update_result)
             update_warning_shown = True
+
         print(f"ForeverSVFix {VERSION}")
         print("=" * 54)
         print(f"WoW:     {wow}")
         print(f"Account: {account or 'automatic'}")
         print(f"Status:  {'installed' if installed else 'not installed'}")
         print()
-        print("  1. Install / refresh ForeverSVFix")
-        print("  2. Repair after addon updates")
-        print("  3. Scan compatible addons")
-        print("  4. Doctor / check installation")
-        print("  5. Show status")
-        print("  6. Change WoW installation")
-        print("  7. Change WoW account")
-        print("  8. Uninstall ForeverSVFix")
-        print("  9. Check for ForeverSVFix updates")
-        print("  0. Exit")
+        print("  1. Apply / Refresh ForeverSVFix")
+        print("  2. Check installation")
+        print("  3. Settings")
+        print("  4. Check for updates")
+        print("  5. Uninstall ForeverSVFix")
+        print("  6. Exit")
         print()
 
         try:
@@ -1553,28 +1616,17 @@ def interactive_menu() -> int:
             print()
             return 0
 
-        if choice == "0":
-            return 0
         if choice == "1":
             run_menu_action(install, wow, account)
         elif choice == "2":
-            run_menu_action(install, wow, account)
+            run_menu_action(doctor, wow, account, True)
         elif choice == "3":
-            run_menu_action(scan, wow, account)
+            wow, account = settings_menu(wow, account, config)
         elif choice == "4":
-            run_menu_action(doctor, wow, account)
+            manual_update_check(config)
+            update_result = check_for_update(config, force=False)
+            update_warning_shown = True
         elif choice == "5":
-            run_menu_action(status, wow)
-        elif choice == "6":
-            config.pop("wow_path", None)
-            config.pop("account", None)
-            save_config(config)
-            clear_screen()
-            wow = select_wow_interactive(config)
-            account = select_account_interactive(wow, config)
-        elif choice == "7":
-            account = select_account_interactive(wow, config, force=True)
-        elif choice == "8":
             answer = input(
                 "\nRemove ForeverSVFix? SavedVariables/backups will be kept. [y/N]: "
             ).strip().lower()
@@ -1582,10 +1634,8 @@ def interactive_menu() -> int:
                 run_menu_action(uninstall, wow)
             else:
                 pause_menu()
-        elif choice == "9":
-            manual_update_check(config)
-            update_result = check_for_update(config, force=False)
-            update_warning_shown = True
+        elif choice == "6":
+            return 0
         else:
             print("\nInvalid selection.")
             pause_menu()
