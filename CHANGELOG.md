@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 RC8
+
+- Add a Linux x86_64 AppImage build.
+- Make AppImage the recommended Linux standalone package.
+- Keep the raw Linux executable as a fallback.
+- Add a desktop-friendly AppRun wrapper that opens the console menu in common
+  terminal emulators when the AppImage is double-clicked.
+- Add AppImage installation notes for non-technical Linux users.
+- Keep the SavedVariables mechanism unchanged.
+
+
 ## 0.4.0 RC7
 
 - Remove the duplicate License section from README.

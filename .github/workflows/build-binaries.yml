@@ -68,3 +68,119 @@ jobs:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.executable }}
           if-no-files-found: error
+
+  appimage:
+    name: Linux x86_64 AppImage
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pyinstaller
+
+      - name: Build Linux executable
+        run: python -m PyInstaller --clean --onefile --name ForeverSVFix forever_sv_fix.py
+
+      - name: Create AppDir
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+
+          cp dist/ForeverSVFix AppDir/usr/bin/ForeverSVFix
+          chmod +x AppDir/usr/bin/ForeverSVFix
+
+          cp assets/foreversvfix.svg AppDir/foreversvfix.svg
+          cp assets/foreversvfix.svg \
+            AppDir/usr/share/icons/hicolor/scalable/apps/foreversvfix.svg
+
+          cat > AppDir/ForeverSVFix.desktop <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=ForeverSVFix
+          Comment=WoW Forever SavedVariables workaround
+          Exec=ForeverSVFix
+          Icon=foreversvfix
+          Terminal=true
+          Categories=Utility;Game;
+          EOF
+
+          cp AppDir/ForeverSVFix.desktop AppDir/usr/share/applications/ForeverSVFix.desktop
+          ln -s foreversvfix.svg AppDir/.DirIcon
+
+          cat > AppDir/AppRun <<'EOF'
+          #!/bin/sh
+          set -eu
+
+          HERE="${APPDIR:-$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)}"
+          BIN="$HERE/usr/bin/ForeverSVFix"
+
+          # When started from an existing terminal, stay in it.
+          if [ -t 0 ] && [ -t 1 ]; then
+              exec "$BIN" "$@"
+          fi
+
+          # When double-clicked from a file manager, open a terminal if possible.
+          if command -v xdg-terminal-exec >/dev/null 2>&1; then
+              exec xdg-terminal-exec "$BIN" "$@"
+          elif command -v konsole >/dev/null 2>&1; then
+              exec konsole -e "$BIN" "$@"
+          elif command -v gnome-terminal >/dev/null 2>&1; then
+              exec gnome-terminal -- "$BIN" "$@"
+          elif command -v kgx >/dev/null 2>&1; then
+              exec kgx -- "$BIN" "$@"
+          elif command -v xfce4-terminal >/dev/null 2>&1; then
+              exec xfce4-terminal --command="$BIN"
+          elif command -v xterm >/dev/null 2>&1; then
+              exec xterm -e "$BIN" "$@"
+          fi
+
+          # Last resort. This still works when launched from a terminal.
+          exec "$BIN" "$@"
+          EOF
+
+          chmod +x AppDir/AppRun
+
+      - name: Download appimagetool
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L \
+            -o appimagetool-x86_64.AppImage \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+
+      - name: Build AppImage
+        shell: bash
+        env:
+          ARCH: x86_64
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          set -euo pipefail
+          ./appimagetool-x86_64.AppImage \
+            AppDir \
+            ForeverSVFix-Linux-x86_64.AppImage
+          chmod +x ForeverSVFix-Linux-x86_64.AppImage
+
+      - name: Smoke test AppImage
+        shell: bash
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: ./ForeverSVFix-Linux-x86_64.AppImage --help
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: ForeverSVFix-Linux-x86_64-AppImage
+          path: ForeverSVFix-Linux-x86_64.AppImage
+          if-no-files-found: error

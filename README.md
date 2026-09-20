@@ -31,7 +31,11 @@ You do **not** need Python when using a standalone ForeverSVFix release.
 
 1. **Close World of Warcraft completely.**
 2. Download the ForeverSVFix file for your operating system from the GitHub
-   **Releases** page.
+   **Releases** page:
+   - **Windows:** `ForeverSVFix-Windows-x64.exe`
+   - **Linux:** `ForeverSVFix-Linux-x86_64.AppImage` (recommended)
+   - **macOS Intel:** `ForeverSVFix-macOS-Intel`
+   - **macOS Apple Silicon:** `ForeverSVFix-macOS-Apple-Silicon`
 3. Start ForeverSVFix.
 4. The first time you run it, ForeverSVFix may ask where WoW Forever is
    installed. Select the `_classic_beta_` folder.
@@ -55,6 +59,24 @@ No repair needed.
 ```
 
 You can now close ForeverSVFix and start World of Warcraft normally.
+
+### Linux AppImage note
+
+On Linux, the AppImage is the recommended download.
+
+If double-clicking it does nothing, your file manager may require you to mark
+the file as executable first. This can usually be done from the file's
+**Properties / Permissions** window.
+
+Advanced users can do the same from a terminal:
+
+```bash
+chmod +x ForeverSVFix-Linux-x86_64.AppImage
+./ForeverSVFix-Linux-x86_64.AppImage
+```
+
+The raw `ForeverSVFix-Linux-x86_64` standalone binary is also provided as a
+fallback.
 
 ### When you install a new addon
 
@@ -146,7 +168,7 @@ Close WoW -> start ForeverSVFix -> press 8
 
 ## Status
 
-**Release candidate: v0.4.0 RC7**
+**Release candidate: v0.4.0 RC8**
 
 Verified in-game on Forever for account-wide SavedVariables:
 
@@ -212,8 +234,9 @@ If matching is ambiguous, it **refuses to restore per-character data** and print
 
 The release workflow builds separate standalone downloads for:
 
-- Windows x64
-- Linux x86_64
+- Windows x64 `.exe`
+- Linux x86_64 AppImage (recommended)
+- Linux x86_64 raw standalone binary (fallback)
 - macOS Intel
 - macOS Apple Silicon
 

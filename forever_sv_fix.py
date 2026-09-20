@@ -32,7 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-VERSION = "0.4.0-rc7"
+VERSION = "0.4.0-rc8"
 DATA_DIR = "ForeverSVFixData"
 CHAR_BOOTSTRAP = "ForeverSVFixCharacter.lua"
 STATE_DIR_NAME = "ForeverSVFix"
