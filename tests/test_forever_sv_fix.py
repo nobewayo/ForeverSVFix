@@ -403,8 +403,9 @@ class Tests(unittest.TestCase):
     def test_update_available_uses_current_version(self):
         self.assertFalse(m.update_available(m.VERSION))
         self.assertFalse(m.update_available("v0.4.0-rc9"))
-        self.assertTrue(m.update_available("v0.4.0"))
-        self.assertTrue(m.update_available("v0.4.1-rc1"))
+        self.assertFalse(m.update_available("v1.0.0"))
+        self.assertFalse(m.update_available("v0.4.1-rc1"))
+        self.assertTrue(m.update_available("v1.0.1-rc1"))
 
     def test_https_context_prefers_certifi_bundle(self):
         old_certifi = m.certifi
@@ -448,8 +449,8 @@ class Tests(unittest.TestCase):
                 cfg = {
                     "update_check": {
                         "last_checked": int(m.time.time()),
-                        "latest_tag": "v0.4.1-rc1",
-                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v0.4.1-rc1",
+                        "latest_tag": "v1.0.1-rc1",
+                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.1-rc1",
                     }
                 }
                 result = m.check_for_update(cfg, force=False)

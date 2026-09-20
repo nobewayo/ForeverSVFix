@@ -7,7 +7,9 @@ It restores those existing SavedVariables before addon code starts. It does not 
 > [!IMPORTANT]
 > **ForeverSVFix does not need to stay open while you play WoW.**
 >
-> Run it when you need to **install, repair, check, or uninstall** the workaround. Once Install or Repair has finished, close ForeverSVFix and start WoW normally.
+> Run it when you need to **Apply / Refresh**, **Check installation**, or uninstall the workaround.
+>
+> Once Apply / Refresh has finished, close ForeverSVFix and start WoW normally.
 >
 > **There is no background service or process that needs to remain running.**
 
@@ -37,20 +39,19 @@ Linux users should normally use the AppImage.
 
 1. **Close World of Warcraft completely.**
 2. Start ForeverSVFix.
-3. If asked, select your WoW Forever `_classic_beta_` folder.
-4. Choose **1. Install / refresh ForeverSVFix**.
-5. Choose **4. Doctor / check installation**.
+3. If asked, select your WoW Forever `_classic_beta_` folder and account.
+4. Choose **1. Apply / Refresh ForeverSVFix**.
+5. Choose **2. Check installation**.
 
 A healthy installation should report:
 
 ```text
+Installation:         OK
 Active installation checks: OK
 No repair needed.
 ```
 
 Then **close ForeverSVFix** and start WoW normally.
-
-**You do not need to leave ForeverSVFix running in the background.** The workaround is already installed in the WoW/addon files.
 
 ### Linux AppImage
 
@@ -65,25 +66,38 @@ A raw Linux standalone binary is also provided as a fallback.
 
 ## Normal use
 
-ForeverSVFix only needs to be opened when you want it to do something:
+The normal menu is:
+
+```text
+1. Apply / Refresh ForeverSVFix
+2. Check installation
+3. Settings
+4. Check for updates
+5. Uninstall ForeverSVFix
+6. Exit
+```
+
+Use **Apply / Refresh** after installing, updating, or removing addons. It rescans the current addon installation, reapplies anything needed, and cleans up ForeverSVFix runtime files that are no longer required.
+
+When installing a **new addon**, WoW must first create that addon's SavedVariables file. Enable the addon, enter the game once, optionally change one of its settings, then exit WoW completely and run **Apply / Refresh**.
+
+A typical workflow is:
 
 ```text
 First installation:
-Close WoW -> start ForeverSVFix -> option 1 -> close ForeverSVFix -> start WoW
+Close WoW -> start ForeverSVFix -> Apply / Refresh -> Check installation
+-> close ForeverSVFix -> start WoW
 
-After updating an addon:
-Close WoW -> start ForeverSVFix -> option 2 -> close ForeverSVFix -> start WoW
+After an addon change:
+Close WoW -> start ForeverSVFix -> Apply / Refresh -> Check installation
+-> close ForeverSVFix -> start WoW
 
 Something seems wrong:
-Close WoW -> start ForeverSVFix -> option 4
+Close WoW -> start ForeverSVFix -> Check installation
 
 Uninstall:
-Close WoW -> start ForeverSVFix -> option 8
+Close WoW -> start ForeverSVFix -> Uninstall ForeverSVFix
 ```
-
-When installing a **new addon**, WoW must first create that addon's SavedVariables file. Enable the addon, enter the game once, optionally change one of its settings, then exit WoW completely and run **2. Repair after addon updates**.
-
-Addon updates may replace files patched by ForeverSVFix, so running Repair after addon updates is recommended.
 
 Uninstalling ForeverSVFix removes the changes it created but does **not** delete your normal WoW SavedVariables or safety backups.
 
@@ -97,11 +111,11 @@ It does **not** redistribute or replace EllesmereUI and does not disable other F
 
 This has been validated in-game with **EllesmereUI v9.2.1**, including profile creation, profile switching, `/reload`, relogging, and full client restarts.
 
-After updating EllesmereUI, close WoW and run **Repair** again.
+After updating EllesmereUI, close WoW and run **Apply / Refresh** again.
 
 ## Current status
 
-**Current release candidate: v0.4.0 RC10**
+**Current release: v1.0.0**
 
 The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 
@@ -109,9 +123,10 @@ The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 - per-character SavedVariables;
 - addons using both types at the same time;
 - settings persistence across `/reload`, relogging, and full client restarts;
-- EllesmereUI profile persistence.
+- EllesmereUI profile persistence;
+- large addon installations with automatic discovery, refresh, and cleanup.
 
-Testing included RareScanner, Auctionator, direct diagnostic SavedVariables, and EllesmereUI v9.2.1.
+Testing has included RareScanner, Auctionator, direct diagnostic SavedVariables, EllesmereUI v9.2.1, and a large mixed addon installation.
 
 ### Platform status
 
@@ -153,17 +168,13 @@ ForeverSVFix does **not** rewrite the contents of your SavedVariables files.
 
 ForeverSVFix checks the public GitHub Releases API for newer versions when you start it.
 
-Automatic checks are cached for 24 hours and include both release candidates and stable releases. No update is downloaded or installed automatically.
+Automatic checks are cached for 24 hours. No update is downloaded or installed automatically.
 
-You can also choose:
-
-```text
-9. Check for ForeverSVFix updates
-```
+You can also choose **4. Check for updates** from the main menu.
 
 The update check sends only a normal HTTPS request to GitHub. ForeverSVFix does **not** send WoW paths, account names, addon lists, SavedVariables, or telemetry.
 
-All SavedVariables repair functionality works without internet access.
+All SavedVariables functionality works without internet access.
 
 Because ForeverSVFix does not stay running in the background, update notifications are shown the next time you open it.
 
@@ -171,19 +182,20 @@ Because ForeverSVFix does not stay running in the background, update notificatio
 
 Running `forever_sv_fix.py` directly requires **Python 3.10+**.
 
-Start the interactive menu with:
+Start the normal interactive menu with:
 
 ```bash
 python3 forever_sv_fix.py
 ```
 
-Common command-line operations:
+Advanced command-line operations remain available:
 
 ```bash
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" scan
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" install
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" repair
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" doctor
+python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" status
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" uninstall
 python3 forever_sv_fix.py check-update
 ```
@@ -192,7 +204,7 @@ If more than one WoW account exists, add `--account "ACCOUNT#1"`.
 
 ## Safety and limitations
 
-Before each install or repair, ForeverSVFix creates a safety backup under:
+Before each Apply / Refresh, ForeverSVFix creates a safety backup under:
 
 ```text
 WTF/ForeverSVFix/backups/
@@ -201,7 +213,8 @@ WTF/ForeverSVFix/backups/
 Current limitations:
 
 - newly installed addons may need to enter the game once before they can be detected;
-- addon updates can remove ForeverSVFix patches, requiring Repair;
+- addon updates can replace ForeverSVFix patches, requiring Apply / Refresh;
+- an addon can still be incompatible with WoW Forever for reasons unrelated to SavedVariables;
 - ambiguous per-character folder matches are deliberately skipped;
 - EllesmereUI compatibility currently targets the known v9.2.1 layout and fails safely if an unfamiliar layout is detected;
 - Windows and macOS still need native in-game validation.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ForeverSVFix 0.4.0 RC11
+ForeverSVFix 1.0.0
 
 Temporary workaround for the World of Warcraft: Forever beta SavedVariables
 loading bug.
@@ -41,7 +41,7 @@ try:
 except ImportError:
     certifi = None
 
-VERSION = "0.4.0-rc11"
+VERSION = "1.0.0"
 DATA_DIR = "ForeverSVFixData"
 CHAR_BOOTSTRAP = "ForeverSVFixCharacter.lua"
 ELLESMERE_COMPAT = "ForeverSVFixEllesmereUI.lua"

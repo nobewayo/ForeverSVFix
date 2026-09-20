@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0 RC11
+## 1.0.0
 
 - Simplify the interactive menu around the actions normal users actually need.
 - Merge Install and Repair into a single **Apply / Refresh ForeverSVFix** action.
@@ -8,7 +8,8 @@
 - Move WoW installation and account selection into a dedicated **Settings** submenu.
 - Keep `scan`, `install`, `repair`, `doctor`, and `status` available as advanced CLI commands.
 - Clarify that Apply / Refresh should be run after installing, updating, or removing addons.
-- Keep the SavedVariables restoration mechanism unchanged from RC10.
+- Promote the validated 0.4.0 release-candidate series to the first stable release.
+- Keep the validated SavedVariables restoration mechanism unchanged from RC10.
 
 ## 0.4.0 RC10
 
