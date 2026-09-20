@@ -62,6 +62,38 @@ No repair needed.
 
 You can now close ForeverSVFix and start World of Warcraft normally.
 
+
+### EllesmereUI support
+
+If **EllesmereUI** is installed, ForeverSVFix also patches the local EllesmereUI
+installation so its normal **Profiles & Presets** functionality can be used on
+WoW Forever.
+
+EllesmereUI includes its normal profile system on Forever, but deliberately
+disables it because of the beta SavedVariables bug. ForeverSVFix detects the
+known EllesmereUI layout, adds a small local compatibility shim, and adjusts
+the EllesmereUI TOC so that the SavedVariables-related safety gate is disabled.
+
+ForeverSVFix does **not** redistribute or replace EllesmereUI itself, and it
+does not disable other Forever-specific compatibility restrictions that are
+unrelated to SavedVariables.
+
+This has been validated in-game with **EllesmereUI v9.2.1**, including:
+
+- profile creation and switching;
+- settings persistence across `/reload`;
+- relogging;
+- full client restarts.
+
+After updating EllesmereUI, close WoW and run:
+
+```text
+2. Repair after addon updates
+```
+
+ForeverSVFix will restore the compatibility patch if the addon update replaced
+the patched files.
+
 ### Linux AppImage note
 
 On Linux, the AppImage is the recommended download.
@@ -214,8 +246,9 @@ ForeverSVFix does **not** redistribute or replace EllesmereUI code. It patches
 the user's installed TOC and removes its generated compatibility file again on
 uninstall. Doctor verifies the expected load order.
 
-This integration has been reviewed against the packaged EllesmereUI v9.2.1
-release but still needs in-game validation before it is considered proven.
+This integration has been validated in-game with EllesmereUI v9.2.1, including
+profile creation and switching, settings persistence across `/reload`, relogging,
+and full client restarts.
 
 ## How it works
 
@@ -390,10 +423,6 @@ If a per-character restore cannot be matched safely, ForeverSVFix prints a yello
 
 ForeverSVFix is a temporary compatibility workaround for a beta client. It is not affiliated with Blizzard Entertainment or individual addon authors.
 
-## Development disclosure
-
-AI tools were used during development to assist with coding, review, testing support, and documentation. Development decisions, iteration, and in-game validation were performed manually by the project author.
-
 ## Forever TOC selection
 
 v0.3.1 no longer patches every flavor-specific TOC shipped in an addon folder.
@@ -463,7 +492,9 @@ experimental until native WoW users confirm the behavior.
 
 ## Development disclosure
 
-ForeverSVFix was developed with assistance from AI tools for coding, review, testing support, and documentation. Development decisions, iteration, and in-game validation were performed manually by the project author.
+AI tools were used during development to assist with coding, review, testing
+support, and documentation. Development decisions, iteration, and in-game
+validation were performed manually by the project author.
 
 ## License
 
