@@ -368,25 +368,6 @@ If a per-character restore cannot be matched safely, ForeverSVFix prints a yello
 ForeverSVFix is a temporary compatibility workaround for a beta client. It is not affiliated with Blizzard Entertainment or individual addon authors.
 
 
-## License
-
-Copyright (c) 2026 Simon Ahnfeldt Nielsen.
-
-You may use, modify, fork, and publish modified versions of ForeverSVFix.
-
-If you publish a modified version, you must:
-
-- clearly state that it is a modified version of ForeverSVFix;
-- retain credit to **Simon Ahnfeldt Nielsen** as the original author; and
-- not claim or imply that your modified version is an official release.
-
-You may not simply mirror or re-upload an **unchanged official copy** of
-ForeverSVFix or its official release files elsewhere without permission.
-
-Linking to the official repository and official releases is allowed.
-
-See [`LICENSE`](LICENSE) for the full terms.
-
 ## Forever TOC selection
 
 v0.3.1 no longer patches every flavor-specific TOC shipped in an addon folder.
@@ -452,4 +433,28 @@ The SavedVariables workaround itself has been validated on Linux/Wine.
 **Windows and macOS have not yet been tested in-game.** Their implementations
 exist and are covered by automated tests/builds, but should remain marked as
 experimental until native WoW users confirm the behavior.
+
+
+## Development disclosure
+
+ForeverSVFix was developed with assistance from AI tools for coding, review, testing support, and documentation. Development decisions, iteration, and in-game validation were performed manually by the project author.
+
+## License
+
+Copyright (c) 2026 Simon Ahnfeldt Nielsen.
+
+You may use, modify, fork, and publish modified versions of ForeverSVFix.
+
+If you publish a modified version, you must:
+
+- clearly state that it is a modified version of ForeverSVFix;
+- retain credit to **Simon Ahnfeldt Nielsen** as the original author; and
+- not claim or imply that your modified version is an official release.
+
+You may not simply mirror or re-upload an **unchanged official copy** of
+ForeverSVFix or its official release files elsewhere without permission.
+
+Linking to the official repository and official releases is allowed.
+
+See [`LICENSE`](LICENSE) for the full terms.
 
