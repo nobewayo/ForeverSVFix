@@ -20,6 +20,8 @@ It is not an addon settings manager and it does not invent a new save format. It
 > Keep your own backups of anything you consider important. Simon Ahnfeldt
 > Nielsen accepts no responsibility for lost settings, broken addon
 > configurations, or other damage resulting from use of ForeverSVFix.
+>
+> ForeverSVFix is not affiliated with, endorsed by, or approved by Blizzard Entertainment. World of Warcraft and Blizzard are trademarks of Blizzard Entertainment.
 
 ## Simple guide
 
