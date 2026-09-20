@@ -1,0 +1,70 @@
+name: build-standalone-binaries
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            os: windows-latest
+            binary: ForeverSVFix-Windows-x64
+            executable: dist/ForeverSVFix-Windows-x64.exe
+            artifact: ForeverSVFix-Windows-x64
+
+          - label: Linux x86_64
+            os: ubuntu-22.04
+            binary: ForeverSVFix-Linux-x86_64
+            executable: dist/ForeverSVFix-Linux-x86_64
+            artifact: ForeverSVFix-Linux-x86_64
+
+          - label: macOS Apple Silicon
+            os: macos-latest
+            binary: ForeverSVFix-macOS-Apple-Silicon
+            executable: dist/ForeverSVFix-macOS-Apple-Silicon
+            artifact: ForeverSVFix-macOS-Apple-Silicon
+
+          - label: macOS Intel
+            os: macos-15-intel
+            binary: ForeverSVFix-macOS-Intel
+            executable: dist/ForeverSVFix-macOS-Intel
+            artifact: ForeverSVFix-macOS-Intel
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install --upgrade pyinstaller
+
+      - name: Build standalone console executable
+        run: python -m PyInstaller --clean --onefile --name "${{ matrix.binary }}" forever_sv_fix.py
+
+      - name: Smoke test executable
+        env:
+          BUILT_EXECUTABLE: ${{ matrix.executable }}
+        run: python -c "import os, subprocess; subprocess.check_call([os.environ['BUILT_EXECUTABLE'], '--help'])"
+
+      - name: Upload standalone build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.executable }}
+          if-no-files-found: error

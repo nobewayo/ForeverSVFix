@@ -1,0 +1,39 @@
+ForeverSVFix License
+
+Copyright (c) 2026 Simon Ahnfeldt Nielsen
+
+Permission is granted to use, copy, modify, fork, and publish modified versions
+of ForeverSVFix, subject to the following conditions:
+
+1. Attribution
+   Any modified version that is published or distributed must clearly credit
+   Simon Ahnfeldt Nielsen as the original author of ForeverSVFix.
+
+   The original copyright notice must remain in the source code.
+
+2. Modified versions
+   You may modify ForeverSVFix and publish or distribute your modified version.
+
+   A published modified version must:
+   - clearly state that it is a modified version of ForeverSVFix;
+   - retain credit to Simon Ahnfeldt Nielsen as the original author; and
+   - not claim or imply that it is an official release by Simon Ahnfeldt Nielsen.
+
+3. No redistribution of unchanged official copies
+   You may not mirror, re-upload, republish, or redistribute an unchanged copy
+   of the official ForeverSVFix project or its official release files on another
+   website, repository, addon site, package manager, file-sharing service, or
+   other distribution platform without prior written permission from
+   Simon Ahnfeldt Nielsen.
+
+   Linking to the official ForeverSVFix repository or its official release
+   downloads is allowed.
+
+4. Contributions
+   Forks, patches, diffs, and pull requests are allowed, provided the original
+   attribution remains intact.
+
+5. No warranty
+   FOREVERSVFIX IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+   DAMAGES, OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
