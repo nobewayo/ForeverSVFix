@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 RC9
+
+- Add targeted EllesmereUI v9.2.1 profile compatibility.
+- Generate a local shim that disables only EllesmereUI's temporary Forever SavedVariables safety gate after `EllesmereUI_Lite.lua`.
+- Preserve `EllesmereUI.IS_FOREVER` and unrelated Forever-specific feature gates.
+- Re-enable EllesmereUI's existing Profiles & Presets and reload-dependent settings flows while ForeverSVFix is active.
+- Suppress EllesmereUI's SavedVariables warning while the compatibility shim is active.
+- Add Doctor and uninstall handling for the generated EllesmereUI compatibility shim.
+- Fail closed on unfamiliar EllesmereUI TOC layouts instead of guessing.
+- Fix Status counts to match the current state-file schema.
+- Add the AI-assisted development disclosure to the README.
+
 ## 0.4.0 RC8
 
 - Add a Linux x86_64 AppImage build.

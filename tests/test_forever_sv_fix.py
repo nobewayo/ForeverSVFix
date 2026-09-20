@@ -52,7 +52,7 @@ class Tests(unittest.TestCase):
             self.assertLess(a, n)
             self.assertLess(c, n)
             self.assertLess(a, c)
-            self.assertIn("## X-ForeverSVFix: 3", lines)
+            self.assertIn("## X-ForeverSVFix: 4", lines)
 
             m.unpatch_toc(toc, "Demo")
             restored = toc.read_text(encoding="utf-8")
@@ -76,7 +76,7 @@ class Tests(unittest.TestCase):
             m.patch_toc(toc, "Demo", True, False)
             text = toc.read_text(encoding="utf-8")
             self.assertEqual(text.count("ForeverSVFixData\\Demo.lua"), 1)
-            self.assertIn("## X-ForeverSVFix: 3", text)
+            self.assertIn("## X-ForeverSVFix: 4", text)
             self.assertNotIn("## X-ForeverSVFix: 2", text)
 
     def test_character_store_discovery(self):
@@ -190,7 +190,7 @@ class Tests(unittest.TestCase):
             retail.write_text(
                 "## Interface: 120100\n"
                 "## SavedVariables: DemoDB\n"
-                "## X-ForeverSVFix: 3\n"
+                "## X-ForeverSVFix: 4\n"
                 "ForeverSVFixData\\Demo.lua\n"
                 "Demo.lua\n",
                 encoding="utf-8",
@@ -226,7 +226,7 @@ class Tests(unittest.TestCase):
 
             self.assertTrue(m.patch_toc(toc, "BagBrother", True, False))
             lines = toc.read_text(encoding="utf-8").splitlines()
-            self.assertIn("## X-ForeverSVFix: 3", lines)
+            self.assertIn("## X-ForeverSVFix: 4", lines)
             self.assertIn(r"ForeverSVFixData\BagBrother.lua", lines)
             self.assertEqual(lines[-1], r"ForeverSVFixData\BagBrother.lua")
 
@@ -280,6 +280,108 @@ class Tests(unittest.TestCase):
             self.assertEqual(rc, 1)
             self.assertIn(m.VERSION, out.getvalue())
             self.assertNotIn("v0.3 is not installed", out.getvalue())
+
+
+    def test_ellesmere_compat_patch_loads_immediately_after_lite(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td) / "EllesmereUI"
+            d.mkdir()
+            toc = d / "EllesmereUI.toc"
+            toc.write_text(
+                "## Interface: 120100, 16001\n"
+                "## SavedVariables: EllesmereUIDB\n"
+                "EllesmereUI_ClientGate.lua\n"
+                "EllesmereUI_Lite.lua\n"
+                "EllesmereUI_Profiles.lua\n"
+                "EllesmereUI_ForeverNotice.lua\n",
+                encoding="utf-8",
+            )
+            self.assertTrue(m.ellesmere_profile_compat_supported(toc))
+            m.generate_ellesmere_compat(d)
+            m.patch_toc(toc, "EllesmereUI", True, False, True)
+            lines = toc.read_text(encoding="utf-8").splitlines()
+            live = lines.index(r"ForeverSVFixData\EllesmereUI.lua")
+            gate = lines.index("EllesmereUI_ClientGate.lua")
+            lite = lines.index("EllesmereUI_Lite.lua")
+            compat = lines.index(m.ELLESMERE_COMPAT)
+            profiles = lines.index("EllesmereUI_Profiles.lua")
+            self.assertLess(live, gate)
+            self.assertEqual(compat, lite + 1)
+            self.assertLess(compat, profiles)
+            shim = (d / m.ELLESMERE_COMPAT).read_text(encoding="utf-8")
+            self.assertIn("EllesmereUI.FOREVER_SV_BUG = false", shim)
+            self.assertNotIn("EllesmereUI.IS_FOREVER = false", shim)
+
+    def test_ellesmere_compat_fails_closed_on_unknown_layout(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td) / "EllesmereUI"
+            d.mkdir()
+            toc = d / "EllesmereUI.toc"
+            toc.write_text(
+                "## Interface: 16001\n"
+                "## SavedVariables: EllesmereUIDB\n"
+                "SomeFutureLoader.lua\n",
+                encoding="utf-8",
+            )
+            self.assertFalse(m.ellesmere_profile_compat_supported(toc))
+
+    def test_ellesmere_install_doctor_and_uninstall(self):
+        if sys.platform.startswith("win"):
+            self.skipTest("Temp Windows junction behavior covered in real CI/manual test.")
+        with tempfile.TemporaryDirectory() as td:
+            wow = Path(td) / "_classic_beta_"
+            addon = wow / "Interface" / "AddOns" / "EllesmereUI"
+            sv = wow / "WTF" / "Account" / "A#1" / "SavedVariables"
+            addon.mkdir(parents=True)
+            sv.mkdir(parents=True)
+            (addon / "EllesmereUI.toc").write_text(
+                "## Interface: 120100, 16001\n"
+                "## SavedVariables: EllesmereUIDB\n"
+                "EllesmereUI_ClientGate.lua\n"
+                "EllesmereUI_Lite.lua\n"
+                "EllesmereUI_Profiles.lua\n"
+                "EllesmereUI_ForeverNotice.lua\n",
+                encoding="utf-8",
+            )
+            (sv / "EllesmereUI.lua").write_text("EllesmereUIDB={profiles={}}\n", encoding="utf-8")
+
+            self.assertEqual(m.install(wow, None), 0)
+            toc = (addon / "EllesmereUI.toc").read_text(encoding="utf-8")
+            self.assertIn(m.ELLESMERE_COMPAT, toc)
+            self.assertTrue((addon / m.ELLESMERE_COMPAT).is_file())
+            self.assertEqual(m.doctor(wow, None), 0)
+
+            (addon / m.ELLESMERE_COMPAT).unlink()
+            self.assertEqual(m.doctor(wow, None), 1)
+            m.install(wow, None)
+            self.assertEqual(m.doctor(wow, None), 0)
+
+            self.assertEqual(m.uninstall(wow), 0)
+            self.assertFalse((addon / m.ELLESMERE_COMPAT).exists())
+            self.assertNotIn("ForeverSVFix", (addon / "EllesmereUI.toc").read_text(encoding="utf-8"))
+
+    def test_status_uses_current_state_schema(self):
+        with tempfile.TemporaryDirectory() as td:
+            wow = Path(td)
+            m.save_state(wow, {
+                "version": m.VERSION,
+                "account": "A#1",
+                "patched": [{"toc": "one"}, {"toc": "two"}],
+                "linked_account_dirs": {"a": "symlink"},
+                "generated_pc_dirs": ["pc1", "pc2", "pc3"],
+                "ellesmere_compat_files": ["compat"],
+            })
+            from io import StringIO
+            from contextlib import redirect_stdout
+            out = StringIO()
+            with redirect_stdout(out):
+                rc = m.status(wow)
+            self.assertEqual(rc, 0)
+            text = out.getvalue()
+            self.assertIn("Patched TOCs:       2", text)
+            self.assertIn("Account links:      1", text)
+            self.assertIn("Character helpers:  3", text)
+            self.assertIn("EllesmereUI fix:    1", text)
 
 
 if __name__ == "__main__":

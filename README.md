@@ -170,7 +170,7 @@ Close WoW -> start ForeverSVFix -> press 8
 
 ## Status
 
-**Release candidate: v0.4.0 RC8**
+**Release candidate: v0.4.0 RC9**
 
 Verified in-game on Forever for account-wide SavedVariables:
 
@@ -195,6 +195,27 @@ The following behavior has been verified on WoW Forever 1.60.1 under Linux/Wine:
 
 The underlying bug/workaround model is therefore validated for all three cases:
 account-wide, per-character, and mixed SavedVariables.
+
+### EllesmereUI profile compatibility (RC9)
+
+EllesmereUI v9.2.1 ships its normal profile implementation on WoW Forever, but
+sets a temporary `FOREVER_SV_BUG` safety flag because the beta client does not
+reliably restore SavedVariables. That flag intentionally disables Profiles &
+Presets, reload-dependent profile flows, first-install/style flows, and the
+normal SavedVariables write path.
+
+When RC9 detects the known EllesmereUI layout, it generates a tiny local
+compatibility shim and loads it immediately after `EllesmereUI_Lite.lua`. The
+shim turns off only that SavedVariables safety flag while leaving
+`EllesmereUI.IS_FOREVER` untouched. Forever-specific restrictions unrelated to
+SavedVariables therefore remain in place.
+
+ForeverSVFix does **not** redistribute or replace EllesmereUI code. It patches
+the user's installed TOC and removes its generated compatibility file again on
+uninstall. Doctor verifies the expected load order.
+
+This integration has been reviewed against the packaged EllesmereUI v9.2.1
+release but still needs in-game validation before it is considered proven.
 
 ## How it works
 
@@ -352,7 +373,7 @@ ForeverSVFix does not rewrite the live SavedVariables contents.
 - An addon update can remove the injected TOC entries; run `doctor`/`repair`.
 - A newly installed addon or newly created character may need one normal save before a matching `.lua` exists; run `repair` afterward.
 - Per-character folder matching is deliberately conservative. Ambiguous matches are skipped.
-- EllesmereUI explicitly disables its profile system on the Forever beta. ForeverSVFix cannot persist settings that an addon itself intentionally refuses to write.
+- EllesmereUI profile compatibility is currently targeted at the known v9.2.1 layout and fails closed on an unfamiliar TOC layout. Run Repair after EllesmereUI updates.
 - This workaround should be removed once Blizzard fixes Forever's SavedVariables loader.
 
 ## Troubleshooting
@@ -369,6 +390,9 @@ If a per-character restore cannot be matched safely, ForeverSVFix prints a yello
 
 ForeverSVFix is a temporary compatibility workaround for a beta client. It is not affiliated with Blizzard Entertainment or individual addon authors.
 
+## Development disclosure
+
+AI tools were used during development to assist with coding, review, testing support, and documentation. Development decisions, iteration, and in-game validation were performed manually by the project author.
 
 ## Forever TOC selection
 
