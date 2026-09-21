@@ -115,7 +115,7 @@ After updating EllesmereUI, close WoW and run **Apply / Refresh** again.
 
 ## Current status
 
-**Current release: v1.0.1**
+**Current release: v1.0.2**
 
 The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 
@@ -168,7 +168,7 @@ ForeverSVFix does **not** rewrite the contents of your SavedVariables files.
 
 ForeverSVFix checks the public GitHub Releases API for newer versions when you start it.
 
-Automatic checks are cached for 24 hours. No update is downloaded or installed automatically.
+Automatic checks are cached for 15 minutes. No update is downloaded or installed automatically.
 
 You can also choose **4. Check for updates** from the main menu.
 

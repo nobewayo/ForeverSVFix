@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ForeverSVFix 1.0.1
+ForeverSVFix 1.0.2
 
 Temporary workaround for the World of Warcraft: Forever beta SavedVariables
 loading bug.
@@ -8,13 +8,12 @@ loading bug.
 Verified on Forever:
 - WoW writes SavedVariables correctly.
 - Forever's normal SavedVariables loader fails to restore them.
-- Executing the live SavedVariables .lua as an ordinary TOC file, after the
-  broken loader stage but before normal addon code, restores account-wide data.
+- Executing the live SavedVariables .lua as an ordinary TOC file at the
+appropriate point in the addon load sequence restores account-wide data.
 
-v0.3 adds per-character restoration through a small generated load-on-demand
-addon for each (addon, character) pair. The target addon's injected bootstrap
-selects only the current character and loads that helper before normal addon
-code executes.
+Per-character restoration uses a small generated load-on-demand addon for each
+(addon, character) pair. The target addon's injected bootstrap selects only
+the current character and loads the matching helper at the restore stage.
 """
 
 from __future__ import annotations
@@ -41,7 +40,7 @@ try:
 except ImportError:
     certifi = None
 
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 DATA_DIR = "ForeverSVFixData"
 CHAR_BOOTSTRAP = "ForeverSVFixCharacter.lua"
 ELLESMERE_COMPAT = "ForeverSVFixEllesmereUI.lua"
@@ -54,7 +53,7 @@ INTERFACE = "16001"
 GITHUB_REPO = "nobewayo/ForeverSVFix"
 GITHUB_RELEASES_API = f"https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=20"
 GITHUB_RELEASES_URL = f"https://github.com/{GITHUB_REPO}/releases"
-UPDATE_CHECK_INTERVAL = 24 * 60 * 60
+UPDATE_CHECK_INTERVAL = 15 * 60
 UPDATE_CHECK_TIMEOUT = 2.5
 VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-rc(\d+))?$")
 
@@ -1194,7 +1193,7 @@ def update_available(latest_tag: str | None) -> bool:
 
 
 def check_for_update(config: dict, force: bool = False) -> dict:
-    """Check GitHub Releases, with a 24-hour cache for automatic checks.
+    """Check GitHub Releases, with a 15-minute cache for automatic checks.
 
     Returns a small result dict. Network failures are intentionally non-fatal.
     """

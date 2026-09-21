@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2
+
+- Reduce the automatic update-check cache from 24 hours to 15 minutes.
+- Keep manual update checks forced and uncached.
+- Update documentation to reflect the shorter automatic update interval.
+
 ## 1.0.1
 
 - Fix SavedVariables restore ordering for addons that initialize or reset their SavedVariables globals while their normal files load.
