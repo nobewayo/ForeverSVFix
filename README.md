@@ -2,7 +2,7 @@
 
 ForeverSVFix is a temporary workaround for a **World of Warcraft: Forever beta** bug where addon SavedVariables are written correctly but are not restored by the client's normal SavedVariables loader.
 
-It restores those existing SavedVariables before addon code starts. It does not create a new save format or replace an addon's settings system.
+It restores those existing SavedVariables using the same load ordering the addon expects. It does not create a new save format or replace an addon's settings system.
 
 > [!IMPORTANT]
 > **ForeverSVFix does not need to stay open while you play WoW.**
@@ -115,7 +115,7 @@ After updating EllesmereUI, close WoW and run **Apply / Refresh** again.
 
 ## Current status
 
-**Current release: v1.0.0**
+**Current release: v1.0.1**
 
 The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 
@@ -142,9 +142,7 @@ The standalone binaries are not code-signed, so Windows SmartScreen or macOS Gat
 
 ## How it works
 
-Normally, WoW restores an addon's SavedVariables before loading the addon. On the Forever beta, that restore stage is currently broken even though WoW still writes the SavedVariables files correctly.
-
-ForeverSVFix links the addon's live SavedVariables directory into the addon and adds the appropriate SavedVariables file to the addon's TOC before its normal code.
+By default, WoW loads an addon's normal files first and restores SavedVariables after the last file in the TOC. Addons can explicitly request the opposite behavior with `
 
 For example:
 
@@ -158,7 +156,7 @@ is made available through:
 Interface/AddOns/RareScanner/ForeverSVFixData/RareScanner.lua
 ```
 
-The existing SavedVariables file is then executed through WoW's normal addon-file loader before RareScanner initializes.
+The existing SavedVariables file is then executed through WoW's addon-file loader at the appropriate point in the addon's loading sequence.
 
 Per-character SavedVariables use a small generated load-on-demand helper that selects only the current character. If ForeverSVFix cannot identify the character safely, it refuses to restore that data rather than risk loading another character's settings.
 
