@@ -142,7 +142,9 @@ The standalone binaries are not code-signed, so Windows SmartScreen or macOS Gat
 
 ## How it works
 
-By default, WoW loads an addon's normal files first and restores SavedVariables after the last file in the TOC. Addons can explicitly request the opposite behavior with `
+By default, WoW loads an addon's normal files first and restores SavedVariables after the last file in the TOC. Addons can explicitly request the opposite behavior with `## LoadSavedVariablesFirst: 1`. On the Forever beta, that restore stage is currently broken even though WoW still writes the SavedVariables files correctly.
+
+ForeverSVFix links the addon's live SavedVariables directory into the addon and adds the appropriate SavedVariables restore file to the TOC. By default it loads after the addon's normal files. If the addon declares `## LoadSavedVariablesFirst: 1`, ForeverSVFix restores the data before those files instead.
 
 For example:
 
