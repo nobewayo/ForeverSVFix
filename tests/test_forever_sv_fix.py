@@ -29,7 +29,7 @@ class Tests(unittest.TestCase):
             self.assertTrue(info.account_saved)
             self.assertTrue(info.character_saved)
 
-    def test_patch_both_modes_before_normal_code(self):
+    def test_patch_both_modes_after_normal_code_by_default(self):
         with tempfile.TemporaryDirectory() as td:
             d = Path(td) / "Demo"
             d.mkdir()
@@ -48,16 +48,63 @@ class Tests(unittest.TestCase):
             lines = toc.read_text(encoding="utf-8").splitlines()
             a = lines.index(r"ForeverSVFixData\Demo.lua")
             c = lines.index("ForeverSVFixCharacter.lua")
-            n = lines.index("Lib.xml")
-            self.assertLess(a, n)
-            self.assertLess(c, n)
+            normal = lines.index("Demo.lua")
+            self.assertLess(normal, a)
             self.assertLess(a, c)
-            self.assertIn("## X-ForeverSVFix: 4", lines)
+            self.assertEqual(lines[-2:], [
+                r"ForeverSVFixData\Demo.lua",
+                "ForeverSVFixCharacter.lua",
+            ])
+            self.assertIn("## X-ForeverSVFix: 5", lines)
 
             m.unpatch_toc(toc, "Demo")
             restored = toc.read_text(encoding="utf-8")
             self.assertNotIn("ForeverSVFix", restored)
             self.assertIn("Lib.xml", restored)
+
+    def test_load_saved_variables_first_keeps_restore_before_scripts(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td) / "Demo"
+            d.mkdir()
+            toc = d / "Demo.toc"
+            toc.write_text(
+                "## Interface: 16001\n"
+                "## LoadSavedVariablesFirst: 1\n"
+                "## SavedVariables: DemoDB\n"
+                "## SavedVariablesPerCharacter: DemoCharDB\n"
+                "Demo.lua\n",
+                encoding="utf-8",
+            )
+
+            m.patch_toc(toc, "Demo", True, True)
+            lines = toc.read_text(encoding="utf-8").splitlines()
+            a = lines.index(r"ForeverSVFixData\Demo.lua")
+            c = lines.index("ForeverSVFixCharacter.lua")
+            normal = lines.index("Demo.lua")
+            self.assertLess(a, c)
+            self.assertLess(c, normal)
+
+    def test_v4_patch_is_reordered_to_post_script_restore(self):
+        with tempfile.TemporaryDirectory() as td:
+            d = Path(td) / "Demo"
+            d.mkdir()
+            toc = d / "Demo.toc"
+            toc.write_text(
+                "## Interface: 16001\n"
+                "## SavedVariables: DemoDB\n"
+                "## X-ForeverSVFix: 4\n"
+                "ForeverSVFixData\\Demo.lua\n"
+                "Demo.lua\n",
+                encoding="utf-8",
+            )
+
+            m.patch_toc(toc, "Demo", True, False)
+            lines = toc.read_text(encoding="utf-8").splitlines()
+            normal = lines.index("Demo.lua")
+            restore = lines.index(r"ForeverSVFixData\Demo.lua")
+            self.assertLess(normal, restore)
+            self.assertIn("## X-ForeverSVFix: 5", lines)
+            self.assertNotIn("## X-ForeverSVFix: 4", lines)
 
     def test_v2_patch_is_migrated_cleanly(self):
         with tempfile.TemporaryDirectory() as td:
@@ -76,7 +123,7 @@ class Tests(unittest.TestCase):
             m.patch_toc(toc, "Demo", True, False)
             text = toc.read_text(encoding="utf-8")
             self.assertEqual(text.count("ForeverSVFixData\\Demo.lua"), 1)
-            self.assertIn("## X-ForeverSVFix: 4", text)
+            self.assertIn("## X-ForeverSVFix: 5", text)
             self.assertNotIn("## X-ForeverSVFix: 2", text)
 
     def test_character_store_discovery(self):
@@ -226,7 +273,7 @@ class Tests(unittest.TestCase):
 
             self.assertTrue(m.patch_toc(toc, "BagBrother", True, False))
             lines = toc.read_text(encoding="utf-8").splitlines()
-            self.assertIn("## X-ForeverSVFix: 4", lines)
+            self.assertIn("## X-ForeverSVFix: 5", lines)
             self.assertIn(r"ForeverSVFixData\BagBrother.lua", lines)
             self.assertEqual(lines[-1], r"ForeverSVFixData\BagBrother.lua")
 
@@ -404,8 +451,8 @@ class Tests(unittest.TestCase):
         self.assertFalse(m.update_available(m.VERSION))
         self.assertFalse(m.update_available("v0.4.0-rc9"))
         self.assertFalse(m.update_available("v1.0.0"))
-        self.assertFalse(m.update_available("v0.4.1-rc1"))
-        self.assertTrue(m.update_available("v1.0.1-rc1"))
+        self.assertFalse(m.update_available("v1.0.1-rc1"))
+        self.assertTrue(m.update_available("v1.0.2-rc1"))
 
     def test_https_context_prefers_certifi_bundle(self):
         old_certifi = m.certifi
@@ -449,8 +496,8 @@ class Tests(unittest.TestCase):
                 cfg = {
                     "update_check": {
                         "last_checked": int(m.time.time()),
-                        "latest_tag": "v1.0.1-rc1",
-                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.1-rc1",
+                        "latest_tag": "v1.0.2-rc1",
+                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.2-rc1",
                     }
                 }
                 result = m.check_for_update(cfg, force=False)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.1
+
+- Fix SavedVariables restore ordering for addons that initialize or reset their SavedVariables globals while their normal files load.
+- Restore account-wide and per-character SavedVariables after normal addon files by default, matching WoW's normal loading semantics.
+- Respect `## LoadSavedVariablesFirst: 1` by restoring before addon scripts when explicitly requested.
+- Preserve the previously validated EllesmereUI compatibility ordering.
+- Migrate existing marker-v4 patches to marker v5 on Apply / Refresh.
+- Add regression coverage for default post-script restores, `LoadSavedVariablesFirst`, and v4-to-v5 migration.
+
 ## 1.0.0
 
 - Simplify the interactive menu around the actions normal users actually need.

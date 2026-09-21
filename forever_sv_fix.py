@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ForeverSVFix 1.0.0
+ForeverSVFix 1.0.1
 
 Temporary workaround for the World of Warcraft: Forever beta SavedVariables
 loading bug.
@@ -41,14 +41,14 @@ try:
 except ImportError:
     certifi = None
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 DATA_DIR = "ForeverSVFixData"
 CHAR_BOOTSTRAP = "ForeverSVFixCharacter.lua"
 ELLESMERE_COMPAT = "ForeverSVFixEllesmereUI.lua"
 STATE_DIR_NAME = "ForeverSVFix"
 STATE_FILE_NAME = "state-v3.json"
 MARKER = "X-ForeverSVFix"
-MARKER_VERSION = "4"
+MARKER_VERSION = "5"
 INTERFACE = "16001"
 
 GITHUB_REPO = "nobewayo/ForeverSVFix"
@@ -61,6 +61,10 @@ VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)(?:-rc(\d+))?$")
 SV_RE = re.compile(r"^\s*##\s*SavedVariables\s*:\s*(.*?)\s*$", re.IGNORECASE)
 SVPC_RE = re.compile(r"^\s*##\s*SavedVariablesPerCharacter\s*:\s*(.*?)\s*$", re.IGNORECASE)
 INTERFACE_RE = re.compile(r"^\s*##\s*Interface\s*:\s*(.*?)\s*$", re.IGNORECASE)
+LOAD_SV_FIRST_RE = re.compile(
+    r"^\s*##\s*LoadSavedVariablesFirst\s*:\s*(?:1|true)\b",
+    re.IGNORECASE,
+)
 MARKER_ANY_RE = re.compile(r"^\s*##\s*X-ForeverSVFix\s*:\s*\d+\s*$", re.IGNORECASE)
 FILE_LINE_RE = re.compile(r"^\s*[^#\s].*$")
 
@@ -102,6 +106,11 @@ def write_text(path: Path, text: str) -> None:
 
 def split_vars(value: str) -> list[str]:
     return [v.strip() for v in value.split(",") if v.strip()]
+
+
+def loads_saved_variables_first(lines: Iterable[str]) -> bool:
+    # True when the addon explicitly asks for SavedVariables before scripts.
+    return any(LOAD_SV_FIRST_RE.match(line) for line in lines)
 
 
 def inspect_toc(path: Path) -> TocInfo:
@@ -551,15 +560,25 @@ def patch_toc(
     if inject_character:
         injected.append(CHAR_BOOTSTRAP)
 
-    if first_file is None:
-        # Metadata/dependency-only TOCs are valid. In that case our restore
-        # entries become the TOC's only executable files.
-        if lines and lines[-1].strip() != "":
-            lines.append("")
-        lines.extend(injected)
-    else:
+    # Normal WoW SavedVariables timing is after the addon's normal files.
+    # Some addons initialize their SavedVariables globals to defaults at file
+    # scope, so restoring before those files lets them overwrite saved data.
+    #
+    # Respect LoadSavedVariablesFirst when explicitly requested. EllesmereUI
+    # stays on its previously validated pre-script compatibility path.
+    restore_before_scripts = (
+        loads_saved_variables_first(lines)
+        or inject_ellesmere_compat
+    )
+
+    if first_file is not None and restore_before_scripts:
         for line in reversed(injected):
             lines.insert(first_file, line)
+    else:
+        if injected:
+            if lines and lines[-1].strip() != "":
+                lines.append("")
+            lines.extend(injected)
 
     if inject_ellesmere_compat:
         # EllesmereUI_Lite.lua creates the FOREVER_SV_BUG safety gate. The
@@ -958,7 +977,7 @@ def doctor(
                 continue
             text = read_text(toc)
             if f"## {MARKER}: {MARKER_VERSION}" not in text:
-                problems.append(f"Addon update removed patch marker: {toc}")
+                problems.append(f"Patch marker missing or outdated: {toc}")
             if item.get("account"):
                 expected = f"{DATA_DIR}\\{addon}.lua"
                 if expected not in text:
