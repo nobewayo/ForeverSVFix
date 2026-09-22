@@ -115,7 +115,7 @@ After updating EllesmereUI, close WoW and run **Apply / Refresh** again.
 
 ## Current status
 
-**Current release: v1.0.2**
+**Current release: v1.0.3**
 
 The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 
