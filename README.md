@@ -79,6 +79,8 @@ The normal menu is:
 
 Use **Apply / Refresh** after installing, updating, or removing addons. It rescans the current addon installation, reapplies anything needed, and cleans up ForeverSVFix runtime files that are no longer required.
 
+> **Windows / CurseForge:** Addon updates may replace ForeverSVFix's directory links. If addon settings suddenly stop restoring after an update, close WoW and run **Apply / Refresh** again. Since v1.0.3, ForeverSVFix should detect and rebuild these links automatically.
+
 When installing a **new addon**, WoW must first create that addon's SavedVariables file. Enable the addon, enter the game once, optionally change one of its settings, then exit WoW completely and run **Apply / Refresh**.
 
 A typical workflow is:
