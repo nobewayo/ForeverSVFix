@@ -210,6 +210,14 @@ Before each Apply / Refresh, ForeverSVFix creates a safety backup under:
 WTF/ForeverSVFix/backups/
 ```
 
+A new numbered backup folder is created each time **Apply / Refresh** runs, so these can accumulate over time.
+
+The backups are only there as a safety measure. After uninstalling ForeverSVFix, if WoW and your addon settings are working normally, you can safely delete:
+
+```text
+WTF/ForeverSVFix/backups/
+```
+
 Current limitations:
 
 - newly installed addons may need to enter the game once before they can be detected;
