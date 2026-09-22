@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.3
+
+- Fix per-character helper selection for WoW Forever's required first-and-last-name character identities.
+- Match the runtime full name first, with safe unique fallbacks for first-name and legacy folder layouts.
+- Tolerate character names represented by multiple path components under the WTF realm folder.
+- Mark generated per-character helpers enabled by default.
+- Recover automatically on Windows when an addon updater replaces a ForeverSVFix junction with a normal directory.
+- Add regression coverage for Forever name/path handling and Windows stale-directory cleanup.
+
 ## 1.0.2
 
 - Reduce the automatic update-check cache from 24 hours to 15 minutes.

@@ -137,6 +137,30 @@ class Tests(unittest.TestCase):
             self.assertEqual(stores[0].realm_folder, "70")
             self.assertEqual(stores[0].character_folder, "Yawa-Wahala")
 
+    def test_character_store_discovery_handles_split_forever_name(self):
+        with tempfile.TemporaryDirectory() as td:
+            account = Path(td) / "123#1"
+            (account / "SavedVariables").mkdir(parents=True)
+            c = account / "70" / "Nycterina" / "Sterngale" / "SavedVariables"
+            c.mkdir(parents=True)
+            stores = m.character_stores(account)
+            self.assertEqual(len(stores), 1)
+            self.assertEqual(stores[0].realm_folder, "70")
+            self.assertEqual(stores[0].character_folder, "Nycterina/Sterngale")
+
+    def test_windows_remove_link_recovers_normal_runtime_directory(self):
+        old_system = m.platform.system
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                runtime = Path(td) / m.DATA_DIR
+                runtime.mkdir()
+                (runtime / "copied.lua").write_text("x=1\n", encoding="utf-8")
+                m.platform.system = lambda: "Windows"
+                m.remove_link(runtime)
+                self.assertFalse(runtime.exists())
+        finally:
+            m.platform.system = old_system
+
     def test_pc_helper_name_stable_and_unique(self):
         s1 = m.CharacterStore("70", "Yawa-Wahala", Path("/x/70/Yawa-Wahala/SavedVariables"))
         s2 = m.CharacterStore("71", "Other-Realm", Path("/x/71/Other-Realm/SavedVariables"))
@@ -163,7 +187,12 @@ class Tests(unittest.TestCase):
             bootstrap = (addon_dir / m.CHAR_BOOTSTRAP).read_text(encoding="utf-8")
             self.assertIn("Yawa-Wahala", bootstrap)
             self.assertIn("C_AddOns.LoadAddOn", bootstrap)
+            self.assertIn("local fullPlayer, realm", bootstrap)
+            self.assertIn("local shortPlayer", bootstrap)
+            self.assertIn('fullPlayer:match("^%S+")', bootstrap)
+            self.assertIn("np:find(nc, 1, true) == 1", bootstrap)
             helper_toc = next(helpers[0].glob("*.toc")).read_text(encoding="utf-8")
+            self.assertIn("## DefaultState: enabled", helper_toc)
             self.assertIn(r"Data\Demo.lua", helper_toc)
             self.assertTrue((helpers[0] / "Data" / "Demo.lua").is_file())
 
@@ -453,7 +482,8 @@ class Tests(unittest.TestCase):
         self.assertFalse(m.update_available("v1.0.0"))
         self.assertFalse(m.update_available("v1.0.1-rc1"))
         self.assertFalse(m.update_available("v1.0.2-rc1"))
-        self.assertTrue(m.update_available("v1.0.3-rc1"))
+        self.assertFalse(m.update_available("v1.0.3-rc1"))
+        self.assertTrue(m.update_available("v1.0.4-rc1"))
 
     def test_https_context_prefers_certifi_bundle(self):
         old_certifi = m.certifi
@@ -497,8 +527,8 @@ class Tests(unittest.TestCase):
                 cfg = {
                     "update_check": {
                         "last_checked": int(m.time.time()),
-                        "latest_tag": "v1.0.3-rc1",
-                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.3-rc1",
+                        "latest_tag": "v1.0.4-rc1",
+                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.4-rc1",
                     }
                 }
                 result = m.check_for_update(cfg, force=False)
