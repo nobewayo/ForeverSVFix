@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.4
+
+- Fix Windows `cmd.exe` output decoding for junction creation and removal by using tolerant locale decoding, preventing `UnicodeDecodeError` failures on systems such as German Windows.
+- Add regression coverage for both Windows junction subprocess paths.
+- Move EllesmereUI-specific compatibility out of ForeverSVFix and into the standalone **EllesmereUI Forever Fix** addon.
+- Keep ForeverSVFix responsible for SavedVariables persistence for EllesmereUI and other affected addons.
+- Detect the legacy `ForeverSVFixEllesmereUI.lua` shim created by v1.0.3 and earlier.
+- Require explicit approval before interactive migration; noninteractive install/repair fails closed unless `--migrate-legacy-ellesmere` is supplied.
+- Back up legacy EllesmereUI TOCs, shim files, and state before migration.
+- Remove the old shim and stale state references after approved migration without auto-installing the standalone addon.
+- Return EllesmereUI SavedVariables restoration to the normal post-script ordering unless its TOC explicitly declares `## LoadSavedVariablesFirst: 1`.
+- Bump the TOC patch marker to v6 for the load-order/migration change.
+- Keep cleanup recognition for old EllesmereUI shim entries so uninstall and migration remain backward-compatible.
+
 ## 1.0.3
 
 - Fix per-character helper selection for WoW Forever's required first-and-last-name character identities.

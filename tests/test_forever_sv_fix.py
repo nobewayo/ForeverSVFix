@@ -55,7 +55,7 @@ class Tests(unittest.TestCase):
                 r"ForeverSVFixData\Demo.lua",
                 "ForeverSVFixCharacter.lua",
             ])
-            self.assertIn("## X-ForeverSVFix: 5", lines)
+            self.assertIn("## X-ForeverSVFix: 6", lines)
 
             m.unpatch_toc(toc, "Demo")
             restored = toc.read_text(encoding="utf-8")
@@ -103,7 +103,7 @@ class Tests(unittest.TestCase):
             normal = lines.index("Demo.lua")
             restore = lines.index(r"ForeverSVFixData\Demo.lua")
             self.assertLess(normal, restore)
-            self.assertIn("## X-ForeverSVFix: 5", lines)
+            self.assertIn("## X-ForeverSVFix: 6", lines)
             self.assertNotIn("## X-ForeverSVFix: 4", lines)
 
     def test_v2_patch_is_migrated_cleanly(self):
@@ -123,7 +123,7 @@ class Tests(unittest.TestCase):
             m.patch_toc(toc, "Demo", True, False)
             text = toc.read_text(encoding="utf-8")
             self.assertEqual(text.count("ForeverSVFixData\\Demo.lua"), 1)
-            self.assertIn("## X-ForeverSVFix: 5", text)
+            self.assertIn("## X-ForeverSVFix: 6", text)
             self.assertNotIn("## X-ForeverSVFix: 2", text)
 
     def test_character_store_discovery(self):
@@ -160,6 +160,78 @@ class Tests(unittest.TestCase):
                 self.assertFalse(runtime.exists())
         finally:
             m.platform.system = old_system
+
+    def test_windows_junction_creation_uses_tolerant_cmd_decoding(self):
+        old_system = m.platform.system
+        old_symlink = m.os.symlink
+        old_run = m.subprocess.run
+        seen = []
+        try:
+            m.platform.system = lambda: "Windows"
+
+            def fail_symlink(*args, **kwargs):
+                raise OSError("symlink unavailable")
+
+            class Result:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            def fake_run(*args, **kwargs):
+                seen.append((args, kwargs))
+                return Result()
+
+            m.os.symlink = fail_symlink
+            m.subprocess.run = fake_run
+
+            with tempfile.TemporaryDirectory() as td:
+                link = Path(td) / "link"
+                target = Path(td) / "target"
+                target.mkdir()
+                self.assertEqual(m.make_dir_link(link, target), "junction")
+
+            self.assertEqual(len(seen), 1)
+            self.assertEqual(seen[0][1].get("errors"), "replace")
+            self.assertTrue(seen[0][1].get("text"))
+            self.assertTrue(seen[0][1].get("capture_output"))
+        finally:
+            m.platform.system = old_system
+            m.os.symlink = old_symlink
+            m.subprocess.run = old_run
+
+    def test_windows_junction_removal_uses_tolerant_cmd_decoding(self):
+        old_system = m.platform.system
+        old_reparse = m.windows_reparse_point
+        old_run = m.subprocess.run
+        seen = []
+        try:
+            m.platform.system = lambda: "Windows"
+            m.windows_reparse_point = lambda path: True
+
+            class Result:
+                returncode = 0
+                stdout = ""
+                stderr = ""
+
+            def fake_run(*args, **kwargs):
+                seen.append((args, kwargs))
+                return Result()
+
+            m.subprocess.run = fake_run
+
+            with tempfile.TemporaryDirectory() as td:
+                junction = Path(td) / "junction"
+                junction.mkdir()
+                m.remove_link(junction)
+
+            self.assertEqual(len(seen), 1)
+            self.assertEqual(seen[0][1].get("errors"), "replace")
+            self.assertTrue(seen[0][1].get("text"))
+            self.assertTrue(seen[0][1].get("capture_output"))
+        finally:
+            m.platform.system = old_system
+            m.windows_reparse_point = old_reparse
+            m.subprocess.run = old_run
 
     def test_pc_helper_name_stable_and_unique(self):
         s1 = m.CharacterStore("70", "Yawa-Wahala", Path("/x/70/Yawa-Wahala/SavedVariables"))
@@ -302,7 +374,7 @@ class Tests(unittest.TestCase):
 
             self.assertTrue(m.patch_toc(toc, "BagBrother", True, False))
             lines = toc.read_text(encoding="utf-8").splitlines()
-            self.assertIn("## X-ForeverSVFix: 5", lines)
+            self.assertIn("## X-ForeverSVFix: 6", lines)
             self.assertIn(r"ForeverSVFixData\BagBrother.lua", lines)
             self.assertEqual(lines[-1], r"ForeverSVFixData\BagBrother.lua")
 
@@ -358,94 +430,150 @@ class Tests(unittest.TestCase):
             self.assertNotIn("v0.3 is not installed", out.getvalue())
 
 
-    def test_ellesmere_compat_patch_loads_immediately_after_lite(self):
-        with tempfile.TemporaryDirectory() as td:
-            d = Path(td) / "EllesmereUI"
-            d.mkdir()
-            toc = d / "EllesmereUI.toc"
-            toc.write_text(
-                "## Interface: 120100, 16001\n"
-                "## SavedVariables: EllesmereUIDB\n"
-                "EllesmereUI_ClientGate.lua\n"
-                "EllesmereUI_Lite.lua\n"
-                "EllesmereUI_Profiles.lua\n"
-                "EllesmereUI_ForeverNotice.lua\n",
-                encoding="utf-8",
-            )
-            self.assertTrue(m.ellesmere_profile_compat_supported(toc))
-            m.generate_ellesmere_compat(d)
-            m.patch_toc(toc, "EllesmereUI", True, False, True)
-            lines = toc.read_text(encoding="utf-8").splitlines()
-            live = lines.index(r"ForeverSVFixData\EllesmereUI.lua")
-            gate = lines.index("EllesmereUI_ClientGate.lua")
-            lite = lines.index("EllesmereUI_Lite.lua")
-            compat = lines.index(m.ELLESMERE_COMPAT)
-            profiles = lines.index("EllesmereUI_Profiles.lua")
-            self.assertLess(live, gate)
-            self.assertEqual(compat, lite + 1)
-            self.assertLess(compat, profiles)
-            shim = (d / m.ELLESMERE_COMPAT).read_text(encoding="utf-8")
-            self.assertIn("EllesmereUI.FOREVER_SV_BUG = false", shim)
-            self.assertNotIn("EllesmereUI.IS_FOREVER = false", shim)
-
-    def test_ellesmere_compat_fails_closed_on_unknown_layout(self):
-        with tempfile.TemporaryDirectory() as td:
-            d = Path(td) / "EllesmereUI"
-            d.mkdir()
-            toc = d / "EllesmereUI.toc"
-            toc.write_text(
-                "## Interface: 16001\n"
-                "## SavedVariables: EllesmereUIDB\n"
-                "SomeFutureLoader.lua\n",
-                encoding="utf-8",
-            )
-            self.assertFalse(m.ellesmere_profile_compat_supported(toc))
-
-    def test_ellesmere_install_doctor_and_uninstall(self):
+    def test_legacy_ellesmere_migration_is_explicit_backed_up_and_post_script(self):
         if sys.platform.startswith("win"):
             self.skipTest("Temp Windows junction behavior covered in real CI/manual test.")
+
         with tempfile.TemporaryDirectory() as td:
             wow = Path(td) / "_classic_beta_"
             addon = wow / "Interface" / "AddOns" / "EllesmereUI"
             sv = wow / "WTF" / "Account" / "A#1" / "SavedVariables"
             addon.mkdir(parents=True)
             sv.mkdir(parents=True)
-            (addon / "EllesmereUI.toc").write_text(
+
+            toc = addon / "EllesmereUI.toc"
+            toc.write_text(
                 "## Interface: 120100, 16001\n"
                 "## SavedVariables: EllesmereUIDB\n"
+                "## X-ForeverSVFix: 5\n"
+                "ForeverSVFixData\\EllesmereUI.lua\n"
                 "EllesmereUI_ClientGate.lua\n"
                 "EllesmereUI_Lite.lua\n"
+                "ForeverSVFixEllesmereUI.lua\n"
                 "EllesmereUI_Profiles.lua\n"
                 "EllesmereUI_ForeverNotice.lua\n",
                 encoding="utf-8",
             )
-            (sv / "EllesmereUI.lua").write_text("EllesmereUIDB={profiles={}}\n", encoding="utf-8")
+            shim = addon / m.ELLESMERE_COMPAT
+            shim.write_text(
+                "if EllesmereUI then EllesmereUI.FOREVER_SV_BUG = false end\n",
+                encoding="utf-8",
+            )
+            (sv / "EllesmereUI.lua").write_text(
+                "EllesmereUIDB={profiles={}}\n",
+                encoding="utf-8",
+            )
+            m.save_state(
+                wow,
+                {
+                    "version": "1.0.3",
+                    "account": "A#1",
+                    "patched": [
+                        {
+                            "toc": str(toc),
+                            "addon": "EllesmereUI",
+                            "account": True,
+                            "per_character": [],
+                        }
+                    ],
+                    "linked_account_dirs": {},
+                    "generated_pc_dirs": [],
+                    "char_bootstraps": [],
+                    "pc_meta": {},
+                    "ellesmere_compat_files": [str(shim)],
+                },
+            )
 
-            self.assertEqual(m.install(wow, None), 0)
-            toc = (addon / "EllesmereUI.toc").read_text(encoding="utf-8")
-            self.assertIn(m.ELLESMERE_COMPAT, toc)
-            self.assertTrue((addon / m.ELLESMERE_COMPAT).is_file())
+            before_toc = toc.read_text(encoding="utf-8")
+            before_shim = shim.read_text(encoding="utf-8")
+
+            with self.assertRaises(m.FixError):
+                m.install(wow, None)
+
+            self.assertEqual(toc.read_text(encoding="utf-8"), before_toc)
+            self.assertEqual(shim.read_text(encoding="utf-8"), before_shim)
+
+            self.assertEqual(
+                m.install(
+                    wow,
+                    None,
+                    allow_legacy_ellesmere_cleanup=True,
+                ),
+                0,
+            )
+
+            updated = toc.read_text(encoding="utf-8")
+            lines = updated.splitlines()
+            self.assertIn("## X-ForeverSVFix: 6", lines)
+            self.assertNotIn("## X-ForeverSVFix: 5", lines)
+            self.assertNotIn(m.ELLESMERE_COMPAT, updated)
+            self.assertFalse(shim.exists())
+            self.assertEqual(updated.count(r"ForeverSVFixData\EllesmereUI.lua"), 1)
+
+            profiles = lines.index("EllesmereUI_Profiles.lua")
+            restore = lines.index(r"ForeverSVFixData\EllesmereUI.lua")
+            self.assertLess(profiles, restore)
+
+            state = m.load_state(wow)
+            self.assertNotIn("ellesmere_compat_files", state)
+            self.assertEqual(state["version"], "1.0.4")
+
+            backup = Path(state["backup"])
+            self.assertTrue(
+                (
+                    backup
+                    / "legacy-ellesmere"
+                    / "runtime"
+                    / "EllesmereUI"
+                    / m.ELLESMERE_COMPAT
+                ).is_file()
+            )
+            self.assertTrue(
+                (
+                    backup
+                    / "legacy-ellesmere"
+                    / "tocs"
+                    / "EllesmereUI"
+                    / "EllesmereUI.toc"
+                ).is_file()
+            )
             self.assertEqual(m.doctor(wow, None), 0)
 
-            (addon / m.ELLESMERE_COMPAT).unlink()
-            self.assertEqual(m.doctor(wow, None), 1)
-            m.install(wow, None)
-            self.assertEqual(m.doctor(wow, None), 0)
+    def test_legacy_ellesmere_state_path_outside_addons_is_never_deleted(self):
+        with tempfile.TemporaryDirectory() as td:
+            wow = Path(td) / "_classic_beta_"
+            (wow / "Interface" / "AddOns").mkdir(parents=True)
+            (wow / "WTF" / "Account" / "A#1" / "SavedVariables").mkdir(parents=True)
 
-            self.assertEqual(m.uninstall(wow), 0)
-            self.assertFalse((addon / m.ELLESMERE_COMPAT).exists())
-            self.assertNotIn("ForeverSVFix", (addon / "EllesmereUI.toc").read_text(encoding="utf-8"))
+            outside = Path(td) / m.ELLESMERE_COMPAT
+            outside.write_text("do not delete\n", encoding="utf-8")
+            m.save_state(
+                wow,
+                {
+                    "version": "1.0.3",
+                    "account": "A#1",
+                    "patched": [],
+                    "linked_account_dirs": {},
+                    "generated_pc_dirs": [],
+                    "ellesmere_compat_files": [str(outside)],
+                },
+            )
+
+            legacy = m.legacy_ellesmere_artifacts(wow)
+            self.assertTrue(m.legacy_ellesmere_present(legacy))
+            m.cleanup_legacy_ellesmere(wow, legacy)
+            self.assertTrue(outside.is_file())
 
     def test_status_uses_current_state_schema(self):
         with tempfile.TemporaryDirectory() as td:
             wow = Path(td)
+            (wow / "Interface" / "AddOns").mkdir(parents=True)
             m.save_state(wow, {
                 "version": m.VERSION,
                 "account": "A#1",
                 "patched": [{"toc": "one"}, {"toc": "two"}],
                 "linked_account_dirs": {"a": "symlink"},
                 "generated_pc_dirs": ["pc1", "pc2", "pc3"],
-                "ellesmere_compat_files": ["compat"],
             })
             from io import StringIO
             from contextlib import redirect_stdout
@@ -457,7 +585,7 @@ class Tests(unittest.TestCase):
             self.assertIn("Patched TOCs:       2", text)
             self.assertIn("Account links:      1", text)
             self.assertIn("Character helpers:  3", text)
-            self.assertIn("EllesmereUI fix:    1", text)
+            self.assertNotIn("EllesmereUI fix:", text)
 
 
     def test_version_key_orders_release_candidates_and_stable(self):
@@ -480,10 +608,9 @@ class Tests(unittest.TestCase):
         self.assertFalse(m.update_available(m.VERSION))
         self.assertFalse(m.update_available("v0.4.0-rc9"))
         self.assertFalse(m.update_available("v1.0.0"))
-        self.assertFalse(m.update_available("v1.0.1-rc1"))
-        self.assertFalse(m.update_available("v1.0.2-rc1"))
-        self.assertFalse(m.update_available("v1.0.3-rc1"))
-        self.assertTrue(m.update_available("v1.0.4-rc1"))
+        self.assertFalse(m.update_available("v1.0.3"))
+        self.assertFalse(m.update_available("v1.0.4-rc1"))
+        self.assertTrue(m.update_available("v1.0.5-rc1"))
 
     def test_https_context_prefers_certifi_bundle(self):
         old_certifi = m.certifi
@@ -527,8 +654,8 @@ class Tests(unittest.TestCase):
                 cfg = {
                     "update_check": {
                         "last_checked": int(m.time.time()),
-                        "latest_tag": "v1.0.4-rc1",
-                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.4-rc1",
+                        "latest_tag": "v1.0.5-rc1",
+                        "latest_url": "https://github.com/nobewayo/ForeverSVFix/releases/tag/v1.0.5-rc1",
                     }
                 }
                 result = m.check_for_update(cfg, force=False)
@@ -554,7 +681,6 @@ class Tests(unittest.TestCase):
                 "patched": [],
                 "linked_account_dirs": {},
                 "generated_pc_dirs": [],
-                "ellesmere_compat_files": [],
             })
 
             out = StringIO()
@@ -569,7 +695,6 @@ class Tests(unittest.TestCase):
             self.assertIn("Patched TOCs:         0", text)
             self.assertIn("Account links:        0", text)
             self.assertIn("Character helpers:    0", text)
-            self.assertIn("EllesmereUI fix:      0", text)
             self.assertIn("No repair needed.", text)
 
 

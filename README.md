@@ -5,6 +5,15 @@ ForeverSVFix is a temporary workaround for a **World of Warcraft: Forever beta**
 It restores those existing SavedVariables using the same load ordering the addon expects. It does not create a new save format or replace an addon's settings system.
 
 > [!IMPORTANT]
+> ## EllesmereUI users
+>
+> EllesmereUI-specific compatibility has moved to the standalone **[EllesmereUI Forever Fix](https://www.curseforge.com/wow/addons/ellesmereui-forever-fix)** addon.
+>
+> **ForeverSVFix is still required** for EllesmereUI profile/settings persistence while the WoW Forever SavedVariables loader bug exists. ForeverSVFix now handles persistence only; the standalone addon handles EllesmereUI-specific compatibility.
+>
+> When upgrading from ForeverSVFix 1.0.3 or earlier, **Apply / Refresh** detects the old built-in EllesmereUI shim and asks before removing it. The standalone addon is not installed automatically.
+
+> [!IMPORTANT]
 > **ForeverSVFix does not need to stay open while you play WoW.**
 >
 > Run it when you need to **Apply / Refresh**, **Check installation**, or uninstall the workaround.
@@ -105,19 +114,25 @@ Uninstalling ForeverSVFix removes the changes it created but does **not** delete
 
 ## EllesmereUI support
 
-ForeverSVFix can also restore **Profiles & Presets** functionality in EllesmereUI on WoW Forever.
+ForeverSVFix now handles **SavedVariables persistence only** for EllesmereUI, the same as it does for other affected addons.
 
-EllesmereUI contains its normal profile system on Forever but disables it because of the SavedVariables bug. When ForeverSVFix recognizes a supported EllesmereUI installation, it adds a small local compatibility shim that disables only that SavedVariables-related safety gate.
+EllesmereUI-specific Forever compatibility, including Profiles & Presets unlocking and Action Bar fixes, lives in the standalone **[EllesmereUI Forever Fix](https://www.curseforge.com/wow/addons/ellesmereui-forever-fix)** addon.
 
-It does **not** redistribute or replace EllesmereUI and does not disable other Forever-specific compatibility restrictions.
+Recommended setup for EllesmereUI users while the Blizzard SavedVariables bug remains:
 
-This has been validated in-game with **EllesmereUI v9.2.1**, including profile creation, profile switching, `/reload`, relogging, and full client restarts.
+```text
+EllesmereUI
++ EllesmereUI Forever Fix
++ ForeverSVFix
+```
 
-After updating EllesmereUI, close WoW and run **Apply / Refresh** again.
+When upgrading from ForeverSVFix 1.0.3 or earlier, run **Apply / Refresh**. If the old built-in `ForeverSVFixEllesmereUI.lua` shim is detected, ForeverSVFix asks before removing it and backs up the legacy files first.
+
+The standalone addon is not downloaded or installed by ForeverSVFix.
 
 ## Current status
 
-**Current release: v1.0.3**
+**Current release: v1.0.4**
 
 The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 
@@ -125,10 +140,9 @@ The workaround has been validated in-game on WoW Forever under Linux/Wine for:
 - per-character SavedVariables;
 - addons using both types at the same time;
 - settings persistence across `/reload`, relogging, and full client restarts;
-- EllesmereUI profile persistence;
 - large addon installations with automatic discovery, refresh, and cleanup.
 
-Testing has included RareScanner, Auctionator, direct diagnostic SavedVariables, EllesmereUI v9.2.1, and a large mixed addon installation.
+Testing has included RareScanner, Auctionator, direct diagnostic SavedVariables, and a large mixed addon installation.
 
 ### Platform status
 
@@ -196,6 +210,8 @@ Advanced command-line operations remain available:
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" scan
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" install
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" repair
+# If a legacy v1.0.3 EllesmereUI shim exists in noninteractive mode:
+python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" repair --migrate-legacy-ellesmere
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" doctor
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" status
 python3 forever_sv_fix.py --wow "/path/to/_classic_beta_" uninstall
@@ -226,7 +242,6 @@ Current limitations:
 - addon updates can replace ForeverSVFix patches, requiring Apply / Refresh;
 - an addon can still be incompatible with WoW Forever for reasons unrelated to SavedVariables;
 - ambiguous per-character folder matches are deliberately skipped;
-- EllesmereUI compatibility currently targets the known v9.2.1 layout and fails safely if an unfamiliar layout is detected;
 - Windows and macOS still need native in-game validation.
 
 ForeverSVFix is intended only as a temporary workaround and should no longer be needed once Blizzard fixes the Forever SavedVariables loader.
