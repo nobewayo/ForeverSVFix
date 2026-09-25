@@ -1,6 +1,6 @@
 
-> [!APPARENTLY NO LONGER NEEDED]
-> It seems that Blizzard have fixed the issue. You should be able to safely uninstall now.
+#
+# It seems that Blizzard have fixed the issue. You should be able to safely uninstall now.
 
 
 
