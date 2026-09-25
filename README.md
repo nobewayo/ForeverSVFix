@@ -1,3 +1,37 @@
+
+> [!APPARENTLY NO LONGER NEEDED]
+> It seems that Blizzard have fixed the issue. You should be able to safely uninstall now.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # ForeverSVFix
 
 ForeverSVFix is a temporary workaround for a **World of Warcraft: Forever beta** bug where addon SavedVariables are written correctly but are not restored by the client's normal SavedVariables loader.
